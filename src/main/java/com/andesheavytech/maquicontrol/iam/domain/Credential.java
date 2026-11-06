@@ -1,4 +1,4 @@
-package com.andesheavytech.maquicontrol.iam;
+package com.andesheavytech.maquicontrol.iam.domain;
 
 import java.time.Instant;
 import java.util.Objects;

@@ -1,6 +1,6 @@
 package com.andesheavytech.maquicontrol.iam.application;
 
-import com.andesheavytech.maquicontrol.iam.UserAccount;
+import com.andesheavytech.maquicontrol.iam.domain.UserAccount;
 import java.util.UUID;
 
 public class RegisterUserService {

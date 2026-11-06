@@ -1,4 +1,4 @@
-package com.andesheavytech.maquicontrol.iam;
+package com.andesheavytech.maquicontrol.iam.domain;
 
 public enum RoleName {
     CONTRACTOR,

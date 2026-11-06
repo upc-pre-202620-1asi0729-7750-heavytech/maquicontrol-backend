@@ -1,11 +1,14 @@
-package com.andesheavytech.maquicontrol.iam;
+package com.andesheavytech.maquicontrol.iam.domain;
+
+import com.andesheavytech.maquicontrol.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 
 import java.time.Instant;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
 
-public class UserAccount {
+public class UserAccount extends AbstractDomainAggregateRoot<UserAccount> {
+
     private final UUID id;
     private final String email;
     private final Credential credential;
@@ -15,8 +18,12 @@ public class UserAccount {
     private Instant lastLoginAt;
 
     public UserAccount(UUID id, String email, String passwordHash) {
-        if (id == null) throw new IllegalArgumentException("Account ID is required");
-        if (email == null || email.isBlank()) throw new IllegalArgumentException("Email is required");
+        if (id == null) {
+            throw new IllegalArgumentException("Account ID is required");
+        }
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email is required");
+        }
 
         this.id = id;
         this.email = email.trim().toLowerCase();
@@ -35,7 +42,9 @@ public class UserAccount {
     }
 
     public void assignRole(RoleName role) {
-        if (role == null) throw new IllegalArgumentException("Role is required");
+        if (role == null) {
+            throw new IllegalArgumentException("Role is required");
+        }
         roles.add(role);
     }
 
