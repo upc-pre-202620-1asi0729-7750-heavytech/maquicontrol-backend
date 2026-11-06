@@ -1,9 +1,11 @@
 package com.andesheavytech.maquicontrol.iam.infrastructure.persistence.jpa.assemblers;
 
+import org.springframework.stereotype.Component;
 import com.andesheavytech.maquicontrol.iam.domain.UserAccount;
 import com.andesheavytech.maquicontrol.iam.infrastructure.persistence.jpa.entities.CredentialPersistenceEntity;
 import com.andesheavytech.maquicontrol.iam.infrastructure.persistence.jpa.entities.UserAccountPersistenceEntity;
 
+@Component
 public class UserAccountPersistenceAssembler {
 
     public UserAccountPersistenceEntity toPersistenceEntity(UserAccount account) {

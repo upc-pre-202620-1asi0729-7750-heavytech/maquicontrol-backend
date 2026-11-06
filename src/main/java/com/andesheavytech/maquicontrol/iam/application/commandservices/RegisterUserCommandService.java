@@ -1,11 +1,13 @@
 package com.andesheavytech.maquicontrol.iam.application.commandservices;
 
+import org.springframework.stereotype.Service;
 import com.andesheavytech.maquicontrol.iam.domain.UserAccount;
 import com.andesheavytech.maquicontrol.platform.shared.application.result.ApplicationError;
 import com.andesheavytech.maquicontrol.platform.shared.application.result.Result;
 
 import java.util.UUID;
 
+@Service
 public class RegisterUserCommandService {
 
     public Result<UserAccount, ApplicationError> registerUser(
