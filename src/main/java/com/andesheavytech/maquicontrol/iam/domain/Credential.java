@@ -4,16 +4,24 @@ import java.time.Instant;
 import java.util.Objects;
 
 public class Credential {
+
     private String passwordHash;
     private Instant changedAt;
 
     public Credential(String passwordHash) {
+        this(passwordHash, Instant.now());
+    }
+
+    public Credential(String passwordHash, Instant changedAt) {
         if (passwordHash == null || passwordHash.isBlank()) {
             throw new IllegalArgumentException("Password hash cannot be empty");
         }
+        if (changedAt == null) {
+            throw new IllegalArgumentException("Credential change date is required");
+        }
 
         this.passwordHash = passwordHash;
-        this.changedAt = Instant.now();
+        this.changedAt = changedAt;
     }
 
     public String getPasswordHash() {

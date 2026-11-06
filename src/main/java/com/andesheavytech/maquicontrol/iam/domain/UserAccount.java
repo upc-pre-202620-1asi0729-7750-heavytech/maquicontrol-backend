@@ -18,19 +18,70 @@ public class UserAccount extends AbstractDomainAggregateRoot<UserAccount> {
     private Instant lastLoginAt;
 
     public UserAccount(UUID id, String email, String passwordHash) {
+        this(
+                id,
+                email,
+                passwordHash,
+                Instant.now(),
+                AccountStatus.PENDING,
+                EnumSet.of(RoleName.CONTRACTOR),
+                Instant.now(),
+                null
+        );
+    }
+
+    private UserAccount(
+            UUID id,
+            String email,
+            String passwordHash,
+            Instant credentialChangedAt,
+            AccountStatus status,
+            Set<RoleName> roles,
+            Instant createdAt,
+            Instant lastLoginAt
+    ) {
         if (id == null) {
             throw new IllegalArgumentException("Account ID is required");
         }
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("Email is required");
         }
+        if (status == null || roles == null || roles.isEmpty()) {
+            throw new IllegalArgumentException("Account status and roles are required");
+        }
+        if (createdAt == null) {
+            throw new IllegalArgumentException("Creation date is required");
+        }
 
         this.id = id;
         this.email = email.trim().toLowerCase();
-        this.credential = new Credential(passwordHash);
-        this.status = AccountStatus.PENDING;
-        this.roles = EnumSet.of(RoleName.CONTRACTOR);
-        this.createdAt = Instant.now();
+        this.credential = new Credential(passwordHash, credentialChangedAt);
+        this.status = status;
+        this.roles = EnumSet.copyOf(roles);
+        this.createdAt = createdAt;
+        this.lastLoginAt = lastLoginAt;
+    }
+
+    public static UserAccount restore(
+            UUID id,
+            String email,
+            String passwordHash,
+            Instant credentialChangedAt,
+            AccountStatus status,
+            Set<RoleName> roles,
+            Instant createdAt,
+            Instant lastLoginAt
+    ) {
+        return new UserAccount(
+                id,
+                email,
+                passwordHash,
+                credentialChangedAt,
+                status,
+                roles,
+                createdAt,
+                lastLoginAt
+        );
     }
 
     public void activate() {
