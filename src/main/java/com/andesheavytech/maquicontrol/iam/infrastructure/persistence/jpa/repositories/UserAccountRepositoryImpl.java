@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public class UserAccountRepositoryImpl implements UserAccountRepository {
@@ -37,6 +38,18 @@ public class UserAccountRepositoryImpl implements UserAccountRepository {
     @Override
     public Optional<UserAccount> findByEmail(String email) {
         return userAccountJpaRepository.findByEmail(email)
+                .flatMap(accountEntity ->
+                        credentialJpaRepository
+                                .findByUserAccount_AccountId(accountEntity.getAccountId())
+                                .map(credentialEntity ->
+                                        assembler.toDomain(accountEntity, credentialEntity)
+                                )
+                );
+    }
+
+    @Override
+    public Optional<UserAccount> findById(UUID id) {
+        return userAccountJpaRepository.findByAccountId(id)
                 .flatMap(accountEntity ->
                         credentialJpaRepository
                                 .findByUserAccount_AccountId(accountEntity.getAccountId())

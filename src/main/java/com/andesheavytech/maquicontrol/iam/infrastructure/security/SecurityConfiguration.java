@@ -28,6 +28,10 @@ public class SecurityConfiguration {
                 )
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
+                                HttpMethod.PUT,
+                                "/api/v1/authentication/accounts/*/roles"
+                        ).hasRole("SYSTEM_ADMINISTRATOR")
+                        .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/authentication/sign-up",
                                 "/api/v1/authentication/sign-in"
