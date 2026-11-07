@@ -4,6 +4,7 @@ import com.andesheavytech.maquicontrol.iam.infrastructure.persistence.jpa.entiti
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 public interface UserAccountJpaRepository
         extends JpaRepository<UserAccountPersistenceEntity, Long> {
@@ -11,4 +12,6 @@ public interface UserAccountJpaRepository
     boolean existsByEmail(String email);
 
     Optional<UserAccountPersistenceEntity> findByEmail(String email);
+
+    Optional<UserAccountPersistenceEntity> findByAccountId(UUID accountId);
 }

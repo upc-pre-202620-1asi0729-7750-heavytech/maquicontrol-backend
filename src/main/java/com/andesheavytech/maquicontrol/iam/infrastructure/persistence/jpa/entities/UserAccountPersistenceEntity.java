@@ -68,4 +68,12 @@ public class UserAccountPersistenceEntity extends AuditableAbstractPersistenceEn
         this.lastLoginAt = lastLoginAt;
         this.roles = new HashSet<>(roles);
     }
+
+    public void updateFrom(UserAccountPersistenceEntity updated) {
+        this.email = updated.email;
+        this.status = updated.status;
+        this.lastLoginAt = updated.lastLoginAt;
+        this.roles.clear();
+        this.roles.addAll(updated.roles);
+    }
 }

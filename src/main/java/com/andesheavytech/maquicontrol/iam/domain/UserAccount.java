@@ -23,7 +23,7 @@ public class UserAccount extends AbstractDomainAggregateRoot<UserAccount> {
                 email,
                 passwordHash,
                 Instant.now(),
-                AccountStatus.PENDING,
+                AccountStatus.ACTIVE,
                 EnumSet.of(RoleName.CONTRACTOR),
                 Instant.now(),
                 null

@@ -7,6 +7,8 @@ import com.andesheavytech.maquicontrol.platform.shared.infrastructure.events.Dom
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Repository
 public class UserAccountRepositoryImpl implements UserAccountRepository {
 
@@ -33,14 +35,38 @@ public class UserAccountRepositoryImpl implements UserAccountRepository {
     }
 
     @Override
+    public Optional<UserAccount> findByEmail(String email) {
+        return userAccountJpaRepository.findByEmail(email)
+                .flatMap(accountEntity ->
+                        credentialJpaRepository
+                                .findByUserAccount_AccountId(accountEntity.getAccountId())
+                                .map(credentialEntity ->
+                                        assembler.toDomain(accountEntity, credentialEntity)
+                                )
+                );
+    }
+
+    @Override
     @Transactional
     public UserAccount save(UserAccount account) {
-        var accountEntity = assembler.toPersistenceEntity(account);
-        var savedAccount = userAccountJpaRepository.save(accountEntity);
+        var accountToSave = assembler.toPersistenceEntity(account);
 
-        var credentialEntity =
+        var savedAccount = userAccountJpaRepository.findByAccountId(account.getId())
+                .map(existingAccount -> {
+                    existingAccount.updateFrom(accountToSave);
+                    return userAccountJpaRepository.save(existingAccount);
+                })
+                .orElseGet(() -> userAccountJpaRepository.save(accountToSave));
+
+        var credentialToSave =
                 assembler.toCredentialPersistenceEntity(savedAccount, account);
-        credentialJpaRepository.save(credentialEntity);
+
+        credentialJpaRepository.findByUserAccount_AccountId(account.getId())
+                .map(existingCredential -> {
+                    existingCredential.updateFrom(credentialToSave);
+                    return credentialJpaRepository.save(existingCredential);
+                })
+                .orElseGet(() -> credentialJpaRepository.save(credentialToSave));
 
         domainEventPublisher.publishAndClearEvents(account);
         return account;

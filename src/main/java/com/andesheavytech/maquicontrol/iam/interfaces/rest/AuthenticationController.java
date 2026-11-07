@@ -1,8 +1,10 @@
 package com.andesheavytech.maquicontrol.iam.interfaces.rest;
 
+import com.andesheavytech.maquicontrol.iam.application.commandservices.AuthenticateUserCommandService;
 import com.andesheavytech.maquicontrol.iam.application.commandservices.RegisterUserCommandService;
-import com.andesheavytech.maquicontrol.iam.domain.UserAccount;
 import com.andesheavytech.maquicontrol.iam.domain.RoleName;
+import com.andesheavytech.maquicontrol.iam.domain.UserAccount;
+import com.andesheavytech.maquicontrol.iam.infrastructure.security.JwtTokenService;
 import com.andesheavytech.maquicontrol.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -23,11 +25,17 @@ import java.util.UUID;
 public class AuthenticationController {
 
     private final RegisterUserCommandService registerUserCommandService;
+    private final AuthenticateUserCommandService authenticateUserCommandService;
+    private final JwtTokenService jwtTokenService;
 
     public AuthenticationController(
-            RegisterUserCommandService registerUserCommandService
+            RegisterUserCommandService registerUserCommandService,
+            AuthenticateUserCommandService authenticateUserCommandService,
+            JwtTokenService jwtTokenService
     ) {
         this.registerUserCommandService = registerUserCommandService;
+        this.authenticateUserCommandService = authenticateUserCommandService;
+        this.jwtTokenService = jwtTokenService;
     }
 
     @PostMapping("/sign-up")
@@ -37,16 +45,38 @@ public class AuthenticationController {
                         request.email(),
                         request.password()
                 ),
-                AuthenticationController::toResponse,
+                AuthenticationController::toSignUpResponse,
                 HttpStatus.CREATED
         );
     }
 
-    private static SignUpResponse toResponse(UserAccount account) {
+    @PostMapping("/sign-in")
+    public ResponseEntity<?> signIn(@Valid @RequestBody SignInRequest request) {
+        return ResponseEntityAssembler.toResponseEntityFromResult(
+                authenticateUserCommandService.authenticateUser(
+                        request.email(),
+                        request.password()
+                ),
+                this::toSignInResponse,
+                HttpStatus.OK
+        );
+    }
+
+    private static SignUpResponse toSignUpResponse(UserAccount account) {
         return new SignUpResponse(
                 account.getId(),
                 account.getEmail(),
                 account.getStatus().name(),
+                account.getRoles()
+        );
+    }
+
+    private SignInResponse toSignInResponse(UserAccount account) {
+        return new SignInResponse(
+                jwtTokenService.generateToken(account),
+                "Bearer",
+                account.getId(),
+                account.getEmail(),
                 account.getRoles()
         );
     }
@@ -57,10 +87,25 @@ public class AuthenticationController {
     ) {
     }
 
+    public record SignInRequest(
+            @NotBlank @Email String email,
+            @NotBlank String password
+    ) {
+    }
+
     public record SignUpResponse(
             UUID id,
             String email,
             String status,
+            Set<RoleName> roles
+    ) {
+    }
+
+    public record SignInResponse(
+            String accessToken,
+            String tokenType,
+            UUID id,
+            String email,
             Set<RoleName> roles
     ) {
     }

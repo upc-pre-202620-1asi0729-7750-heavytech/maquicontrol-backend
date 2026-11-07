@@ -41,4 +41,9 @@ public class CredentialPersistenceEntity extends AuditableAbstractPersistenceEnt
         this.passwordHash = passwordHash;
         this.changedAt = changedAt;
     }
+
+    public void updateFrom(CredentialPersistenceEntity updated) {
+        this.passwordHash = updated.passwordHash;
+        this.changedAt = updated.changedAt;
+    }
 }
