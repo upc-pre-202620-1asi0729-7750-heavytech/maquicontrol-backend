@@ -1,20 +1,71 @@
 package com.andesheavytech.maquicontrol.platform.iam.interfaces.rest;
 
-import com.andesheavytech.maquicontrol.platform.iam.application.IdentityAccessService;
-import com.andesheavytech.maquicontrol.platform.iam.domain.RoleName;
-import jakarta.validation.Valid; import jakarta.validation.constraints.*;
-import org.springframework.http.HttpStatus; import org.springframework.web.bind.annotation.*;
-import java.util.List;
+import com.andesheavytech.maquicontrol.platform.iam.application.commandservices.IdentityAccessCommandService;
+import com.andesheavytech.maquicontrol.platform.iam.interfaces.rest.resources.AuthenticatedUserAccountResource;
+import com.andesheavytech.maquicontrol.platform.iam.interfaces.rest.resources.SignInResource;
+import com.andesheavytech.maquicontrol.platform.iam.interfaces.rest.resources.SignUpResource;
+import com.andesheavytech.maquicontrol.platform.iam.interfaces.rest.resources.UserAccountResource;
+import com.andesheavytech.maquicontrol.platform.iam.interfaces.rest.transform.AuthenticatedUserAccountResourceFromEntityAssembler;
+import com.andesheavytech.maquicontrol.platform.iam.interfaces.rest.transform.SignInCommandFromResourceAssembler;
+import com.andesheavytech.maquicontrol.platform.iam.interfaces.rest.transform.SignUpCommandFromResourceAssembler;
+import com.andesheavytech.maquicontrol.platform.iam.interfaces.rest.transform.UserAccountResourceFromEntityAssembler;
+import com.andesheavytech.maquicontrol.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@RestController @RequestMapping("/api/v1")
+/**
+ * Sign up and sign in endpoints.
+ */
+@RestController
+@RequestMapping(value = "/api/v1/authentication", produces = MediaType.APPLICATION_JSON_VALUE)
+@Tag(name = "Authentication", description = "Sign up and sign in endpoints")
+@SecurityRequirements
 public class AuthenticationController {
-    private final IdentityAccessService identity;
-    public AuthenticationController(IdentityAccessService identity) { this.identity=identity; }
-    @PostMapping("/authentication/sign-up") @ResponseStatus(HttpStatus.CREATED) public AuthenticationResource signUp(@Valid @RequestBody SignUpRequest request) { return resource(identity.register(new IdentityAccessService.SignUpData(request.email(),request.password(),request.firstName(),request.lastName(),request.phone(),request.address(),request.role()))); }
-    @PostMapping("/authentication/sign-in") public AuthenticationResource signIn(@Valid @RequestBody SignInRequest request) { return resource(identity.authenticate(request.email(),request.password())); }
-    @GetMapping("/roles") public List<RoleName> roles() { return identity.roles(); }
-    private static AuthenticationResource resource(IdentityAccessService.AuthenticationResult result) { return new AuthenticationResource(result.token(),result.accountId(),result.email(),result.roles()); }
-    public record SignUpRequest(@NotBlank @Email @Size(max=160) String email,@NotBlank @Size(min=8,max=72) String password,@NotBlank @Size(max=80) String firstName,@NotBlank @Size(max=80) String lastName,@NotBlank @Pattern(regexp="\\+?[0-9]{7,15}") String phone,@NotBlank @Size(max=200) String address,RoleName role) { }
-    public record SignInRequest(@NotBlank @Email String email,@NotBlank String password) { }
-    public record AuthenticationResource(String token,Long accountId,String email,List<RoleName> roles) { }
+
+    private final IdentityAccessCommandService identityAccessCommandService;
+
+    public AuthenticationController(IdentityAccessCommandService identityAccessCommandService) {
+        this.identityAccessCommandService = identityAccessCommandService;
+    }
+
+    @PostMapping("/sign-up")
+    @Operation(summary = "Sign up", description = "Creates a user account with the chosen role.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Account created",
+                    content = @Content(schema = @Schema(implementation = UserAccountResource.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid data or role"),
+            @ApiResponse(responseCode = "409", description = "Email already registered")
+    })
+    public ResponseEntity<?> signUp(@Valid @RequestBody SignUpResource resource) {
+        var result = identityAccessCommandService.handle(SignUpCommandFromResourceAssembler.toCommandFromResource(resource));
+        return ResponseEntityAssembler.toResponseEntityFromResult(result,
+                UserAccountResourceFromEntityAssembler::toResourceFromEntity, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/sign-in")
+    @Operation(summary = "Sign in", description = "Checks the credentials and returns a bearer token.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Signed in",
+                    content = @Content(schema = @Schema(implementation = AuthenticatedUserAccountResource.class))),
+            @ApiResponse(responseCode = "401", description = "Wrong email or password"),
+            @ApiResponse(responseCode = "403", description = "Account not active")
+    })
+    public ResponseEntity<?> signIn(@Valid @RequestBody SignInResource resource) {
+        var result = identityAccessCommandService.handle(SignInCommandFromResourceAssembler.toCommandFromResource(resource));
+        return ResponseEntityAssembler.toResponseEntityFromResult(result,
+                AuthenticatedUserAccountResourceFromEntityAssembler::toResourceFromEntity, HttpStatus.OK);
+    }
 }
