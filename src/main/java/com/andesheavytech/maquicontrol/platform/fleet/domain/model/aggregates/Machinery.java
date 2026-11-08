@@ -96,6 +96,21 @@ public class Machinery extends AbstractDomainAggregateRoot<Machinery> {
         }
     }
 
+    /** A maintenance started: the machine leaves the catalog until it is finished. */
+    public void startMaintenance() {
+        if (status.isCommitted()) {
+            throw new IllegalStateException("machinery is %s and cannot go into maintenance".formatted(status));
+        }
+        this.status = MachineryStatus.IN_MAINTENANCE;
+    }
+
+    /** A maintenance finished: the machine goes back to the catalog. */
+    public void finishMaintenance() {
+        if (status == MachineryStatus.IN_MAINTENANCE) {
+            this.status = MachineryStatus.AVAILABLE;
+        }
+    }
+
     public boolean isOwnedBy(Long profileId) {
         return ownerProfileId.equals(profileId);
     }

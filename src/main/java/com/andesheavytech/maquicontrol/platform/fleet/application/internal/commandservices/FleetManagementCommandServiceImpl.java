@@ -7,11 +7,13 @@ import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.Chan
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.CreateCategoryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.DeleteCategoryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.DeleteMachineryCommand;
+import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.FinishMachineryMaintenanceCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.MarkMachineryAsRentedCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.PublishMachineryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.ReleaseMachineryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.ReserveMachineryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.SeedCategoriesCommand;
+import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.StartMachineryMaintenanceCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.UpdateCategoryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.UpdateMachineryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.valueobjects.MachineryLocation;
@@ -129,19 +131,41 @@ public class FleetManagementCommandServiceImpl implements FleetManagementCommand
     @Override
     @Transactional
     public Result<Machinery, ApplicationError> handle(ReserveMachineryCommand command) {
-        return applyRentalTransition(command.machineryId(), Machinery::reserve);
+        return applyStatusTransition(command.machineryId(), Machinery::reserve);
     }
 
     @Override
     @Transactional
     public Result<Machinery, ApplicationError> handle(MarkMachineryAsRentedCommand command) {
-        return applyRentalTransition(command.machineryId(), Machinery::markAsRented);
+        return applyStatusTransition(command.machineryId(), Machinery::markAsRented);
     }
 
     @Override
     @Transactional
     public Result<Machinery, ApplicationError> handle(ReleaseMachineryCommand command) {
-        return applyRentalTransition(command.machineryId(), Machinery::release);
+        return applyStatusTransition(command.machineryId(), Machinery::release);
+    }
+
+    @Override
+    @Transactional
+    public Result<Machinery, ApplicationError> handle(StartMachineryMaintenanceCommand command) {
+        var found = machineryRepository.findById(command.machineryId());
+        if (found.isEmpty()) {
+            return Result.failure(ApplicationError.notFound("Machinery", String.valueOf(command.machineryId())));
+        }
+        var machinery = found.get();
+        try {
+            machinery.startMaintenance();
+            return Result.success(machineryRepository.save(machinery));
+        } catch (IllegalStateException e) {
+            return Result.failure(ApplicationError.businessRuleViolation("machinery status", e.getMessage()));
+        }
+    }
+
+    @Override
+    @Transactional
+    public Result<Machinery, ApplicationError> handle(FinishMachineryMaintenanceCommand command) {
+        return applyStatusTransition(command.machineryId(), Machinery::finishMaintenance);
     }
 
     @Override
@@ -211,7 +235,7 @@ public class FleetManagementCommandServiceImpl implements FleetManagementCommand
         return Result.success(found.get());
     }
 
-    private Result<Machinery, ApplicationError> applyRentalTransition(Long machineryId, Consumer<Machinery> transition) {
+    private Result<Machinery, ApplicationError> applyStatusTransition(Long machineryId, Consumer<Machinery> transition) {
         var found = machineryRepository.findById(machineryId);
         if (found.isEmpty()) {
             return Result.failure(ApplicationError.notFound("Machinery", String.valueOf(machineryId)));

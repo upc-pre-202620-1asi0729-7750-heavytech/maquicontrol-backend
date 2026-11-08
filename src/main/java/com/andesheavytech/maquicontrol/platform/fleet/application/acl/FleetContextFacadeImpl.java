@@ -49,6 +49,11 @@ public class FleetContextFacadeImpl implements FleetContextFacade {
     }
 
     @Override
+    public String fetchMachineryStatus(Long machineryId) {
+        return find(machineryId).map(machinery -> machinery.getStatus().name()).orElse("");
+    }
+
+    @Override
     public List<Long> fetchMachineryIdsByOwnerProfileId(Long ownerProfileId) {
         return fleetManagementQueryService.handle(new GetMachineryByOwnerProfileIdQuery(ownerProfileId)).stream()
                 .map(Machinery::getId)
