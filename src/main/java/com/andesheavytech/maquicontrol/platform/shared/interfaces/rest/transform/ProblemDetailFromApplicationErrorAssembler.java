@@ -65,6 +65,8 @@ public final class ProblemDetailFromApplicationErrorAssembler {
             case "VALIDATION_ERROR" -> "validation-error";
             case "BUSINESS_RULE_VIOLATION" -> "business-rule-violation";
             case "UNEXPECTED_ERROR" -> "unexpected-error";
+            case "UNAUTHORIZED" -> "unauthorized";
+            case "FORBIDDEN" -> "forbidden";
             case String s when s.endsWith("_NOT_FOUND") -> "not-found";
             case String s when s.endsWith("_CONFLICT") -> "conflict";
             default -> errorCode.toLowerCase(Locale.ROOT).replace('_', '-');
@@ -76,6 +78,8 @@ public final class ProblemDetailFromApplicationErrorAssembler {
         return switch (errorCode) {
             case "VALIDATION_ERROR" -> "Validation Error";
             case "BUSINESS_RULE_VIOLATION" -> "Business Rule Violation";
+            case "UNAUTHORIZED" -> "Unauthorized";
+            case "FORBIDDEN" -> "Forbidden";
             case String s when s.endsWith("_NOT_FOUND") -> "Resource Not Found";
             case String s when s.endsWith("_CONFLICT") -> "Resource Conflict";
             default -> status instanceof HttpStatus httpStatus ? httpStatus.getReasonPhrase() : "Error";
@@ -107,6 +111,8 @@ public final class ProblemDetailFromApplicationErrorAssembler {
             case "VALIDATION_ERROR" -> "error.validation.message";
             case "BUSINESS_RULE_VIOLATION" -> "error.business-rule.message";
             case "UNEXPECTED_ERROR" -> "error.unexpected.message";
+            case "UNAUTHORIZED" -> "error.unauthorized.message";
+            case "FORBIDDEN" -> "error.forbidden.message";
             case String s when s.endsWith("_NOT_FOUND") -> "error.not-found.message";
             case String s when s.endsWith("_CONFLICT") -> "error.conflict.message";
             default -> "error.generic.message";
@@ -162,6 +168,8 @@ public final class ProblemDetailFromApplicationErrorAssembler {
             case "VALIDATION_ERROR" -> HttpStatus.BAD_REQUEST;
             case String s when s.endsWith("_NOT_FOUND") -> HttpStatus.NOT_FOUND;
             case "BUSINESS_RULE_VIOLATION" -> HttpStatusCode.valueOf(422);
+            case "UNAUTHORIZED" -> HttpStatus.UNAUTHORIZED;
+            case "FORBIDDEN" -> HttpStatus.FORBIDDEN;
             case String s when s.endsWith("_CONFLICT") -> HttpStatus.CONFLICT;
             default -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
