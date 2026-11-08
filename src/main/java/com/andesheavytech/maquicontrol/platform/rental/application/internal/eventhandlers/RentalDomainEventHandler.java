@@ -50,6 +50,8 @@ public class RentalDomainEventHandler {
     @EventListener
     public void on(RentalCompletedEvent event) {
         publishClosed(event.rentalId(), event.machineryId());
+        applicationEventPublisher.publishEvent(new com.andesheavytech.maquicontrol.platform.rental.interfaces.events.RentalCompletedIntegrationEvent(
+                event.rentalId(), event.machineryId(), event.contractorProfileId()));
     }
 
     private void publishClosed(Long rentalId, Long machineryId) {
