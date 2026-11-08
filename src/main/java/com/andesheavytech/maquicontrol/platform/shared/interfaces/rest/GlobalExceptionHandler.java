@@ -7,10 +7,12 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.text.MessageFormat;
 import java.util.Map;
@@ -68,10 +70,41 @@ public class GlobalExceptionHandler {
         return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(applicationError);
     }
 
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<ProblemDetail> handleResponseStatusException(ResponseStatusException ex) {
-        var problem = ProblemDetail.forStatusAndDetail(ex.getStatusCode(), ex.getReason() != null ? ex.getReason() : "Request failed");
-        return ResponseEntity.status(ex.getStatusCode()).body(problem);
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ProblemDetail> handleIllegalStateException(IllegalStateException ex) {
+        var applicationError = ApplicationError.businessRuleViolation(
+                resolveMessageOrDefault("error.business.context", "domain-rule"),
+                ex.getMessage() != null ? ex.getMessage() : "Operation not allowed in the current state"
+        );
+        return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(applicationError);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ProblemDetail> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+        var applicationError = ApplicationError.validationError(
+                "request-body",
+                resolveMessageOrDefault("validation.request.unreadable", "Request body is missing or malformed")
+        );
+        return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(applicationError);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ProblemDetail> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        var applicationError = ApplicationError.validationError(
+                ex.getName(),
+                "value '%s' has an invalid format".formatted(ex.getValue())
+        );
+        return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(applicationError);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ProblemDetail> handleAccessDenied(AccessDeniedException ex) {
+        var applicationError = ApplicationError.forbidden(
+                "resource",
+                resolveMessageOrDefault("error.forbidden.role", "Your role is not allowed to perform this operation")
+        );
+        return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(applicationError);
     }
 
     @ExceptionHandler(RuntimeException.class)
