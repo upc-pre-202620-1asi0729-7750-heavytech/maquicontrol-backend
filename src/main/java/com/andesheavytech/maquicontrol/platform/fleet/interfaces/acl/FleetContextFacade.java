@@ -31,6 +31,12 @@ public interface FleetContextFacade {
     String fetchHourlyRateCurrency(Long machineryId);
 
     /**
+     * Status of the machine (AVAILABLE, RESERVED, RENTED, IN_MAINTENANCE, OUT_OF_SERVICE), or an
+     * empty string when it does not exist.
+     */
+    String fetchMachineryStatus(Long machineryId);
+
+    /**
      * Ids of the machines published by the owner.
      */
     List<Long> fetchMachineryIdsByOwnerProfileId(Long ownerProfileId);
