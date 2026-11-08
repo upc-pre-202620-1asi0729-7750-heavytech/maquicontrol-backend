@@ -51,7 +51,13 @@ public class SnakeCaseWithPluralizedTablePhysicalNamingStrategy implements Physi
     }
 
     private Identifier toPlural(final Identifier identifier) {
-        final String newName = pluralize(identifier.getText());
+        final String text = identifier.getText();
+        final int lastSeparator = text.lastIndexOf('_');
+        // Only the last word is pluralized, so uncountable nouns such as "information" keep their form
+        // in compound names like "contact_information".
+        final String newName = lastSeparator < 0
+                ? pluralize(text)
+                : text.substring(0, lastSeparator + 1) + pluralize(text.substring(lastSeparator + 1));
         return Identifier.toIdentifier(newName);
     }
 }
