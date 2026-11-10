@@ -16,8 +16,6 @@ import com.andesheavytech.maquicontrol.platform.subscription.domain.repositories
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-
 /**
  * Implementation of {@link SubscriptionManagementCommandService}.
  */
@@ -65,14 +63,25 @@ public class SubscriptionManagementCommandServiceImpl implements SubscriptionMan
             return Result.failure(ApplicationError.notFound("Subscription", String.valueOf(command.subscriptionId())));
         }
         var subscription = found.get();
+        if (command.payerProfileId() == null || !subscription.getOwnerProfileId().equals(command.payerProfileId())) {
+            return Result.failure(ApplicationError.forbidden("subscription", "only the owner can pay their subscription"));
+        }
         var planOpt = subscriptionPlanRepository.findById(subscription.getPlanId());
-        Money amount;
-        if (command.amount() != null && command.currency() != null) {
-            amount = new Money(command.amount(), command.currency());
-        } else if (planOpt.isPresent()) {
-            amount = planOpt.get().getPrice();
-        } else {
-            amount = new Money(BigDecimal.ZERO, "PEN");
+        if (planOpt.isEmpty()) {
+            return Result.failure(ApplicationError.notFound("SubscriptionPlan", String.valueOf(subscription.getPlanId())));
+        }
+        var planPrice = planOpt.get().getPrice();
+        Money amount = planPrice;
+        if (command.amount() != null) {
+            try {
+                amount = new Money(command.amount(), command.currency() != null ? command.currency() : planPrice.currency().name());
+            } catch (IllegalArgumentException e) {
+                return Result.failure(ApplicationError.validationError("payment", e.getMessage()));
+            }
+            if (!amount.equals(planPrice)) {
+                return Result.failure(ApplicationError.businessRuleViolation("payment amount",
+                        "the payment amount must match the plan price (%s %s)".formatted(planPrice.amount(), planPrice.currency())));
+            }
         }
 
         try {

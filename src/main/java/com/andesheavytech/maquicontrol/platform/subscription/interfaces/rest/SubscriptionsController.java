@@ -92,10 +92,14 @@ public class SubscriptionsController {
             @ApiResponse(responseCode = "200", description = "Payment recorded and subscription activated",
                     content = @Content(schema = @Schema(implementation = SubscriptionResource.class))),
             @ApiResponse(responseCode = "404", description = "Subscription not found"),
-            @ApiResponse(responseCode = "422", description = "Subscription cancelled")
+            @ApiResponse(responseCode = "403", description = "Subscription belongs to another user"),
+            @ApiResponse(responseCode = "422", description = "Subscription cancelled or amount different from the plan price")
     })
+    @PreAuthorize("hasAnyRole('FLEET_OWNER','FLEET_ADMINISTRATOR')")
     public ResponseEntity<?> confirmCheckout(@PathVariable Long subscriptionId,
-                                            @Valid @RequestBody ConfirmCheckoutResource resource) {
+                                            @Valid @RequestBody ConfirmCheckoutResource resource,
+                                            Authentication authentication) {
+        var payerProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
         PaymentStatus status = PaymentStatus.APPROVED;
         if (resource.status() != null) {
             try {
@@ -104,7 +108,7 @@ public class SubscriptionsController {
             }
         }
         var command = new ConfirmCheckoutCommand(
-                subscriptionId, resource.providerPaymentId(), resource.amount(), resource.currency(), status);
+                subscriptionId, payerProfileId, resource.providerPaymentId(), resource.amount(), resource.currency(), status);
         return ResponseEntityAssembler.toResponseEntityFromResult(
                 subscriptionManagementCommandService.handle(command),
                 SubscriptionResourceFromEntityAssembler::toResourceFromEntity,
@@ -147,17 +151,34 @@ public class SubscriptionsController {
     }
 
     @GetMapping("/{subscriptionId}")
-    @Operation(summary = "Get subscription by ID")
-    public ResponseEntity<SubscriptionResource> getSubscriptionById(@PathVariable Long subscriptionId) {
-        return subscriptionManagementQueryService.handle(new GetSubscriptionByIdQuery(subscriptionId))
-                .map(SubscriptionResourceFromEntityAssembler::toResourceFromEntity)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @PreAuthorize("hasAnyRole('FLEET_OWNER','FLEET_ADMINISTRATOR')")
+    @Operation(summary = "Get subscription by ID", description = "Only the owner of the subscription can see it.")
+    public ResponseEntity<SubscriptionResource> getSubscriptionById(@PathVariable Long subscriptionId,
+                                                                    Authentication authentication) {
+        var ownerProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
+        var subscription = subscriptionManagementQueryService.handle(new GetSubscriptionByIdQuery(subscriptionId));
+        if (subscription.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!subscription.get().getOwnerProfileId().equals(ownerProfileId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return ResponseEntity.ok(SubscriptionResourceFromEntityAssembler.toResourceFromEntity(subscription.get()));
     }
 
     @GetMapping("/{subscriptionId}/payments")
-    @Operation(summary = "View payment history of a subscription")
-    public ResponseEntity<List<PaymentResource>> getPayments(@PathVariable Long subscriptionId) {
+    @PreAuthorize("hasAnyRole('FLEET_OWNER','FLEET_ADMINISTRATOR')")
+    @Operation(summary = "View payment history of a subscription", description = "Only the owner of the subscription can see it.")
+    public ResponseEntity<List<PaymentResource>> getPayments(@PathVariable Long subscriptionId,
+                                                             Authentication authentication) {
+        var ownerProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
+        var subscription = subscriptionManagementQueryService.handle(new GetSubscriptionByIdQuery(subscriptionId));
+        if (subscription.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!subscription.get().getOwnerProfileId().equals(ownerProfileId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         var payments = subscriptionManagementQueryService.handle(new ViewPaymentsQuery(subscriptionId)).stream()
                 .map(SubscriptionResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();

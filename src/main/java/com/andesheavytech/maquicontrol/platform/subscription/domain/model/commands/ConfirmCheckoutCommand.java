@@ -4,5 +4,5 @@ import com.andesheavytech.maquicontrol.platform.subscription.domain.model.valueo
 
 import java.math.BigDecimal;
 
-public record ConfirmCheckoutCommand(Long subscriptionId, String providerPaymentId, BigDecimal amount, String currency, PaymentStatus status) {
+public record ConfirmCheckoutCommand(Long subscriptionId, Long payerProfileId, String providerPaymentId, BigDecimal amount, String currency, PaymentStatus status) {
 }
