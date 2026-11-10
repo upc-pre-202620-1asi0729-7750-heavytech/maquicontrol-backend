@@ -4,12 +4,12 @@ import com.andesheavytech.maquicontrol.platform.fleet.application.commandservice
 import com.andesheavytech.maquicontrol.platform.fleet.application.queryservices.FleetManagementQueryService;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.CreateCategoryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.DeleteCategoryCommand;
-import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.UpdateCategoryCommand;
+import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.RenameCategoryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.queries.GetCategoryByIdQuery;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.queries.ViewCategoriesQuery;
 import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.resources.CategoryResource;
 import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.resources.CreateCategoryResource;
-import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.resources.UpdateCategoryResource;
+import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.resources.RenameCategoryResource;
 import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.transform.CategoryResourceFromEntityAssembler;
 import com.andesheavytech.maquicontrol.platform.shared.application.result.ApplicationError;
 import com.andesheavytech.maquicontrol.platform.shared.interfaces.rest.resources.MessageResource;
@@ -41,7 +41,7 @@ import java.util.List;
 @Tag(name = "Categories", description = "Machinery category endpoints")
 public class CategoriesController {
 
-    private static final String ADMIN_ROLES = "hasAnyRole('FLEET_ADMINISTRATOR','SYSTEM_ADMINISTRATOR')";
+    private static final String CATALOG_ROLES = "hasAnyRole('FLEET_OWNER','FLEET_ADMINISTRATOR','SYSTEM_ADMINISTRATOR')";
 
     private final FleetManagementCommandService fleetManagementCommandService;
     private final FleetManagementQueryService fleetManagementQueryService;
@@ -53,7 +53,7 @@ public class CategoriesController {
     }
 
     @PostMapping
-    @PreAuthorize(ADMIN_ROLES)
+    @PreAuthorize(CATALOG_ROLES)
     @Operation(summary = "Create category")
     public ResponseEntity<?> createCategory(@Valid @RequestBody CreateCategoryResource resource) {
         return ResponseEntityAssembler.toResponseEntityFromResult(
@@ -62,16 +62,16 @@ public class CategoriesController {
     }
 
     @PutMapping("/{categoryId}")
-    @PreAuthorize(ADMIN_ROLES)
+    @PreAuthorize(CATALOG_ROLES)
     @Operation(summary = "Update category")
-    public ResponseEntity<?> updateCategory(@PathVariable Long categoryId, @Valid @RequestBody UpdateCategoryResource resource) {
+    public ResponseEntity<?> renameCategory(@PathVariable Long categoryId, @Valid @RequestBody RenameCategoryResource resource) {
         return ResponseEntityAssembler.toResponseEntityFromResult(
-                fleetManagementCommandService.handle(new UpdateCategoryCommand(categoryId, resource.name())),
+                fleetManagementCommandService.handle(new RenameCategoryCommand(categoryId, resource.name())),
                 CategoryResourceFromEntityAssembler::toResourceFromEntity, HttpStatus.OK);
     }
 
     @DeleteMapping("/{categoryId}")
-    @PreAuthorize(ADMIN_ROLES)
+    @PreAuthorize(CATALOG_ROLES)
     @Operation(summary = "Delete category", description = "Deletes a category that no machine uses.")
     public ResponseEntity<?> deleteCategory(@PathVariable Long categoryId) {
         return ResponseEntityAssembler.toResponseEntityFromResult(

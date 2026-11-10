@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-public record PublishMachineryResource(
+public record RegisterMachineryResource(
         @NotNull Long categoryId,
         @NotBlank String name,
         String description,

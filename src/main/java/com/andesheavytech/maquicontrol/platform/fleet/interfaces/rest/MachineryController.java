@@ -8,11 +8,11 @@ import com.andesheavytech.maquicontrol.platform.fleet.domain.model.queries.GetMa
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.queries.ViewMachineryCatalogQuery;
 import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.resources.ChangeMachineryStatusResource;
 import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.resources.MachineryResource;
-import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.resources.PublishMachineryResource;
+import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.resources.RegisterMachineryResource;
 import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.resources.UpdateMachineryResource;
 import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.transform.ChangeMachineryStatusCommandFromResourceAssembler;
 import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.transform.MachineryResourceFromEntityAssembler;
-import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.transform.PublishMachineryCommandFromResourceAssembler;
+import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.transform.RegisterMachineryCommandFromResourceAssembler;
 import com.andesheavytech.maquicontrol.platform.fleet.interfaces.rest.transform.UpdateMachineryCommandFromResourceAssembler;
 import com.andesheavytech.maquicontrol.platform.profiles.interfaces.acl.ProfilesContextFacade;
 import com.andesheavytech.maquicontrol.platform.shared.application.result.ApplicationError;
@@ -76,10 +76,10 @@ public class MachineryController {
             @ApiResponse(responseCode = "404", description = "Category not found"),
             @ApiResponse(responseCode = "422", description = "The account has no profile yet")
     })
-    public ResponseEntity<?> publishMachinery(@Valid @RequestBody PublishMachineryResource resource,
+    public ResponseEntity<?> registerMachinery(@Valid @RequestBody RegisterMachineryResource resource,
                                               Authentication authentication) {
         var ownerProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
-        var command = PublishMachineryCommandFromResourceAssembler.toCommandFromResource(ownerProfileId, resource);
+        var command = RegisterMachineryCommandFromResourceAssembler.toCommandFromResource(ownerProfileId, resource);
         return ResponseEntityAssembler.toResponseEntityFromResult(fleetManagementCommandService.handle(command),
                 MachineryResourceFromEntityAssembler::toResourceFromEntity, HttpStatus.CREATED);
     }

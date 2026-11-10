@@ -8,12 +8,12 @@ import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.Dele
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.DeleteMachineryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.FinishMachineryMaintenanceCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.MarkMachineryAsRentedCommand;
-import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.PublishMachineryCommand;
+import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.RegisterMachineryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.ReleaseMachineryCommand;
+import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.RenameCategoryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.ReserveMachineryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.SeedCategoriesCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.StartMachineryMaintenanceCommand;
-import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.UpdateCategoryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.UpdateMachineryCommand;
 import com.andesheavytech.maquicontrol.platform.shared.application.result.ApplicationError;
 import com.andesheavytech.maquicontrol.platform.shared.application.result.Result;
@@ -23,7 +23,7 @@ import com.andesheavytech.maquicontrol.platform.shared.application.result.Result
  */
 public interface FleetManagementCommandService {
 
-    Result<Machinery, ApplicationError> handle(PublishMachineryCommand command);
+    Result<Machinery, ApplicationError> handle(RegisterMachineryCommand command);
 
     Result<Machinery, ApplicationError> handle(UpdateMachineryCommand command);
 
@@ -43,7 +43,7 @@ public interface FleetManagementCommandService {
 
     Result<Category, ApplicationError> handle(CreateCategoryCommand command);
 
-    Result<Category, ApplicationError> handle(UpdateCategoryCommand command);
+    Result<Category, ApplicationError> handle(RenameCategoryCommand command);
 
     Result<Long, ApplicationError> handle(DeleteCategoryCommand command);
 

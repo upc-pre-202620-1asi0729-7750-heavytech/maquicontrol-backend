@@ -9,12 +9,12 @@ import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.Dele
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.DeleteMachineryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.FinishMachineryMaintenanceCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.MarkMachineryAsRentedCommand;
-import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.PublishMachineryCommand;
+import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.RegisterMachineryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.ReleaseMachineryCommand;
+import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.RenameCategoryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.ReserveMachineryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.SeedCategoriesCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.StartMachineryMaintenanceCommand;
-import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.UpdateCategoryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.commands.UpdateMachineryCommand;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.valueobjects.MachineryLocation;
 import com.andesheavytech.maquicontrol.platform.fleet.domain.model.valueobjects.MachinerySpecification;
@@ -50,7 +50,7 @@ public class FleetManagementCommandServiceImpl implements FleetManagementCommand
 
     @Override
     @Transactional
-    public Result<Machinery, ApplicationError> handle(PublishMachineryCommand command) {
+    public Result<Machinery, ApplicationError> handle(RegisterMachineryCommand command) {
         if (command.ownerProfileId() == null || command.ownerProfileId() <= 0) {
             return Result.failure(ApplicationError.businessRuleViolation("profile required",
                     "create your profile before publishing machinery"));
@@ -184,7 +184,7 @@ public class FleetManagementCommandServiceImpl implements FleetManagementCommand
 
     @Override
     @Transactional
-    public Result<Category, ApplicationError> handle(UpdateCategoryCommand command) {
+    public Result<Category, ApplicationError> handle(RenameCategoryCommand command) {
         var found = categoryRepository.findById(command.categoryId());
         if (found.isEmpty()) {
             return Result.failure(ApplicationError.notFound("Category", String.valueOf(command.categoryId())));
