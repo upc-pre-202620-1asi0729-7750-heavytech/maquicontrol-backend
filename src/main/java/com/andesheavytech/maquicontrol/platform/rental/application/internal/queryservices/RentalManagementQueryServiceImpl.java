@@ -4,11 +4,11 @@ import com.andesheavytech.maquicontrol.platform.rental.application.internal.outb
 import com.andesheavytech.maquicontrol.platform.rental.application.queryservices.RentalManagementQueryService;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.aggregates.Rental;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.CheckMachineryAvailabilityQuery;
-import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetPendingRentalRequestsByOwnerProfileIdQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalByIdQuery;
-import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalsByContractorProfileIdQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalsDueToCompleteQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalsDueToStartQuery;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewMyReservationsQuery;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewPendingRequestsQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.valueobjects.RentalPeriod;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.valueobjects.RentalStatus;
 import com.andesheavytech.maquicontrol.platform.rental.domain.repositories.RentalRepository;
@@ -40,12 +40,12 @@ public class RentalManagementQueryServiceImpl implements RentalManagementQuerySe
     }
 
     @Override
-    public List<Rental> handle(GetRentalsByContractorProfileIdQuery query) {
+    public List<Rental> handle(ViewMyReservationsQuery query) {
         return rentalRepository.findByContractorProfileId(query.contractorProfileId());
     }
 
     @Override
-    public List<Rental> handle(GetPendingRentalRequestsByOwnerProfileIdQuery query) {
+    public List<Rental> handle(ViewPendingRequestsQuery query) {
         var machineryIds = externalFleetService.fetchMachineryIdsByOwnerProfileId(query.ownerProfileId());
         if (machineryIds.isEmpty()) {
             return List.of();

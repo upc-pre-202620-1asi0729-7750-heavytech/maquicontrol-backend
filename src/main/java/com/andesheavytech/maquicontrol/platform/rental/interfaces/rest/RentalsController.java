@@ -4,14 +4,15 @@ import com.andesheavytech.maquicontrol.platform.profiles.interfaces.acl.Profiles
 import com.andesheavytech.maquicontrol.platform.rental.application.commandservices.RentalManagementCommandService;
 import com.andesheavytech.maquicontrol.platform.rental.application.queryservices.RentalManagementQueryService;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.aggregates.Rental;
-import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.CancelRentalCommand;
-import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.ConfirmRentalCommand;
-import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.RejectRentalCommand;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.CancelReservationCommand;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.ConfirmReservationCommand;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.RejectReservationCommand;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.RequestRentalCommand;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.CheckMachineryAvailabilityQuery;
-import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetPendingRentalRequestsByOwnerProfileIdQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalByIdQuery;
-import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalsByContractorProfileIdQuery;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewMyReservationsQuery;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewPendingRequestsQuery;
+import com.andesheavytech.maquicontrol.platform.rental.interfaces.acl.RentalContextFacade;
 import com.andesheavytech.maquicontrol.platform.rental.interfaces.rest.resources.MachineryAvailabilityResource;
 import com.andesheavytech.maquicontrol.platform.rental.interfaces.rest.resources.RentalResource;
 import com.andesheavytech.maquicontrol.platform.rental.interfaces.rest.resources.RequestRentalResource;
@@ -58,13 +59,16 @@ public class RentalsController {
     private final RentalManagementCommandService rentalManagementCommandService;
     private final RentalManagementQueryService rentalManagementQueryService;
     private final ProfilesContextFacade profilesContextFacade;
+    private final RentalContextFacade rentalContextFacade;
 
     public RentalsController(RentalManagementCommandService rentalManagementCommandService,
                              RentalManagementQueryService rentalManagementQueryService,
-                             ProfilesContextFacade profilesContextFacade) {
+                             ProfilesContextFacade profilesContextFacade,
+                             RentalContextFacade rentalContextFacade) {
         this.rentalManagementCommandService = rentalManagementCommandService;
         this.rentalManagementQueryService = rentalManagementQueryService;
         this.profilesContextFacade = profilesContextFacade;
+        this.rentalContextFacade = rentalContextFacade;
     }
 
     @PostMapping
@@ -101,9 +105,9 @@ public class RentalsController {
                                                 Authentication authentication) {
         var profileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
         Result<Rental, ApplicationError> result = switch (RentalStatusCommandFromResourceAssembler.toCommandFromResource(rentalId, profileId, resource)) {
-            case ConfirmRentalCommand command -> rentalManagementCommandService.handle(command);
-            case RejectRentalCommand command -> rentalManagementCommandService.handle(command);
-            case CancelRentalCommand command -> rentalManagementCommandService.handle(command);
+            case ConfirmReservationCommand command -> rentalManagementCommandService.handle(command);
+            case RejectReservationCommand command -> rentalManagementCommandService.handle(command);
+            case CancelReservationCommand command -> rentalManagementCommandService.handle(command);
             default -> throw new IllegalArgumentException("unsupported status");
         };
         return ResponseEntityAssembler.toResponseEntityFromResult(result,
@@ -114,7 +118,7 @@ public class RentalsController {
     @Operation(summary = "View my reservations", description = "Rentals requested by the signed-in contractor.")
     public ResponseEntity<List<RentalResource>> getMyReservations(Authentication authentication) {
         var contractorProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
-        var rentals = rentalManagementQueryService.handle(new GetRentalsByContractorProfileIdQuery(contractorProfileId)).stream()
+        var rentals = rentalManagementQueryService.handle(new ViewMyReservationsQuery(contractorProfileId)).stream()
                 .map(RentalResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();
         return ResponseEntity.ok(rentals);
@@ -125,7 +129,7 @@ public class RentalsController {
     @Operation(summary = "View pending rental requests", description = "Requests waiting for the signed-in owner's answer.")
     public ResponseEntity<List<RentalResource>> getPendingRequests(Authentication authentication) {
         var ownerProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
-        var rentals = rentalManagementQueryService.handle(new GetPendingRentalRequestsByOwnerProfileIdQuery(ownerProfileId)).stream()
+        var rentals = rentalManagementQueryService.handle(new ViewPendingRequestsQuery(ownerProfileId)).stream()
                 .map(RentalResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();
         return ResponseEntity.ok(rentals);
@@ -142,8 +146,13 @@ public class RentalsController {
     }
 
     @GetMapping("/{rentalId}")
-    @Operation(summary = "Get rental by id")
-    public ResponseEntity<?> getRentalById(@PathVariable Long rentalId) {
+    @Operation(summary = "Get rental by id", description = "Only the contractor of the rental or the owner of the machinery can see it.")
+    public ResponseEntity<?> getRentalById(@PathVariable Long rentalId, Authentication authentication) {
+        var profileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
+        if (rentalContextFacade.existsRental(rentalId) && !rentalContextFacade.isRentalParticipant(rentalId, profileId)) {
+            return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+                    ApplicationError.forbidden("rental", "only the contractor or the machinery owner can see this rental"));
+        }
         return rentalManagementQueryService.handle(new GetRentalByIdQuery(rentalId))
                 .<ResponseEntity<?>>map(rental -> ResponseEntity.ok(RentalResourceFromEntityAssembler.toResourceFromEntity(rental)))
                 .orElseGet(() -> ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(

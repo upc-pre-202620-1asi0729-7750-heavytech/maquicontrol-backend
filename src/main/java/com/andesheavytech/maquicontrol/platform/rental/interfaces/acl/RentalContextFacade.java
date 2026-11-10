@@ -1,5 +1,8 @@
 package com.andesheavytech.maquicontrol.platform.rental.interfaces.acl;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 /**
  * Facade that other bounded contexts use to read Rental data.
  */
@@ -33,7 +36,7 @@ public interface RentalContextFacade {
     /**
      * Total amount of the rental, or null when not found.
      */
-    java.math.BigDecimal fetchRentalTotalAmount(Long rentalId);
+    BigDecimal fetchRentalTotalAmount(Long rentalId);
 
     /**
      * Currency code of the rental, or empty string when not found.
@@ -43,5 +46,10 @@ public interface RentalContextFacade {
     /**
      * Agreed end date of the rental period, or null when not found.
      */
-    java.time.LocalDate fetchRentalEndDate(Long rentalId);
+    LocalDate fetchRentalEndDate(Long rentalId);
+
+    /**
+     * Whether the profile takes part in the rental, as its contractor or as the owner of the rented machinery.
+     */
+    boolean isRentalParticipant(Long rentalId, Long profileId);
 }

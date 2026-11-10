@@ -3,10 +3,10 @@ package com.andesheavytech.maquicontrol.platform.rental.application.internal.com
 import com.andesheavytech.maquicontrol.platform.rental.application.commandservices.RentalManagementCommandService;
 import com.andesheavytech.maquicontrol.platform.rental.application.internal.outboundservices.acl.ExternalFleetService;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.aggregates.Rental;
-import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.CancelRentalCommand;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.CancelReservationCommand;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.CompleteRentalCommand;
-import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.ConfirmRentalCommand;
-import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.RejectRentalCommand;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.ConfirmReservationCommand;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.RejectReservationCommand;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.RequestRentalCommand;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.StartRentalCommand;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.valueobjects.RentalPeriod;
@@ -79,7 +79,7 @@ public class RentalManagementCommandServiceImpl implements RentalManagementComma
 
     @Override
     @Transactional
-    public Result<Rental, ApplicationError> handle(ConfirmRentalCommand command) {
+    public Result<Rental, ApplicationError> handle(ConfirmReservationCommand command) {
         var found = findRentalOfOwner(command.rentalId(), command.ownerProfileId());
         if (found.isFailure()) {
             return found;
@@ -94,7 +94,7 @@ public class RentalManagementCommandServiceImpl implements RentalManagementComma
 
     @Override
     @Transactional
-    public Result<Rental, ApplicationError> handle(RejectRentalCommand command) {
+    public Result<Rental, ApplicationError> handle(RejectReservationCommand command) {
         var found = findRentalOfOwner(command.rentalId(), command.ownerProfileId());
         if (found.isFailure()) {
             return found;
@@ -104,7 +104,7 @@ public class RentalManagementCommandServiceImpl implements RentalManagementComma
 
     @Override
     @Transactional
-    public Result<Rental, ApplicationError> handle(CancelRentalCommand command) {
+    public Result<Rental, ApplicationError> handle(CancelReservationCommand command) {
         var found = rentalRepository.findById(command.rentalId());
         if (found.isEmpty()) {
             return Result.failure(ApplicationError.notFound("Rental", String.valueOf(command.rentalId())));

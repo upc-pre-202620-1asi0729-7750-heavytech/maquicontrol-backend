@@ -2,11 +2,11 @@ package com.andesheavytech.maquicontrol.platform.rental.application.queryservice
 
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.aggregates.Rental;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.CheckMachineryAvailabilityQuery;
-import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetPendingRentalRequestsByOwnerProfileIdQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalByIdQuery;
-import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalsByContractorProfileIdQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalsDueToCompleteQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalsDueToStartQuery;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewMyReservationsQuery;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewPendingRequestsQuery;
 import com.andesheavytech.maquicontrol.platform.shared.application.result.ApplicationError;
 import com.andesheavytech.maquicontrol.platform.shared.application.result.Result;
 
@@ -20,9 +20,9 @@ public interface RentalManagementQueryService {
 
     Optional<Rental> handle(GetRentalByIdQuery query);
 
-    List<Rental> handle(GetRentalsByContractorProfileIdQuery query);
+    List<Rental> handle(ViewMyReservationsQuery query);
 
-    List<Rental> handle(GetPendingRentalRequestsByOwnerProfileIdQuery query);
+    List<Rental> handle(ViewPendingRequestsQuery query);
 
     Result<Boolean, ApplicationError> handle(CheckMachineryAvailabilityQuery query);
 
