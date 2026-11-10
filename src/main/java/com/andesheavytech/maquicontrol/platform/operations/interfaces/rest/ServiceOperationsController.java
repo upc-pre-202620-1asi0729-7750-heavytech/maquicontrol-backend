@@ -78,11 +78,12 @@ public class ServiceOperationsController {
     })
     public ResponseEntity<?> startOperation(@Valid @RequestBody StartOperationResource resource,
                                             Authentication authentication) {
+        var requesterProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
         Long operatorProfileId = resource.operatorProfileId();
         if (operatorProfileId == null || operatorProfileId <= 0) {
-            operatorProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
+            operatorProfileId = requesterProfileId;
         }
-        var command = new StartOperationCommand(resource.rentalId(), resource.machineryId(), operatorProfileId);
+        var command = new StartOperationCommand(resource.rentalId(), resource.machineryId(), operatorProfileId, requesterProfileId);
         return ResponseEntityAssembler.toResponseEntityFromResult(
                 operationsManagementCommandService.handle(command),
                 ServiceOperationResourceFromEntityAssembler::toResourceFromEntity,
@@ -99,9 +100,11 @@ public class ServiceOperationsController {
             @ApiResponse(responseCode = "422", description = "Operation not IN_PROGRESS")
     })
     public ResponseEntity<?> recordWorkedHours(@PathVariable Long operationId,
-                                               @Valid @RequestBody RecordWorkedHoursResource resource) {
+                                               @Valid @RequestBody RecordWorkedHoursResource resource,
+                                               Authentication authentication) {
+        var recorderProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
         var command = new RecordWorkedHoursCommand(operationId, resource.workDate(), resource.startTime(),
-                resource.endTime(), resource.observations());
+                resource.endTime(), resource.observations(), recorderProfileId);
         return ResponseEntityAssembler.toResponseEntityFromResult(
                 operationsManagementCommandService.handle(command),
                 ServiceOperationResourceFromEntityAssembler::toResourceFromEntity,

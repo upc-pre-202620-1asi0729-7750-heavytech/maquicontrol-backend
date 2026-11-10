@@ -52,6 +52,14 @@ public class OperationsManagementCommandServiceImpl implements OperationsManagem
         if (!externalFleetService.existsMachinery(command.machineryId())) {
             return Result.failure(ApplicationError.notFound("Machinery", String.valueOf(command.machineryId())));
         }
+        if (!command.machineryId().equals(externalRentalService.fetchRentalMachineryId(command.rentalId()))) {
+            return Result.failure(ApplicationError.businessRuleViolation("machinery",
+                    "the machinery does not belong to rental " + command.rentalId()));
+        }
+        if (!isRentalParticipant(command.rentalId(), command.machineryId(), command.requesterProfileId())) {
+            return Result.failure(ApplicationError.forbidden("operation",
+                    "only the contractor of the rental or the fleet owner can start the operation"));
+        }
         if (serviceOperationRepository.existsByRentalId(command.rentalId())) {
             return Result.failure(ApplicationError.conflict("ServiceOperation",
                     "a service operation already exists for rental " + command.rentalId()));
@@ -72,6 +80,12 @@ public class OperationsManagementCommandServiceImpl implements OperationsManagem
             return Result.failure(ApplicationError.notFound("ServiceOperation", String.valueOf(command.operationId())));
         }
         var operation = found.get();
+        var recorder = command.recorderProfileId();
+        boolean isOperator = recorder != null && recorder.equals(operation.getOperatorProfileId());
+        if (!isOperator && !isRentalParticipant(operation.getRentalId(), operation.getMachineryId(), recorder)) {
+            return Result.failure(ApplicationError.forbidden("worked hours",
+                    "only the operator, the contractor of the rental or the fleet owner can record worked hours"));
+        }
         try {
             var shift = new WorkShift(command.workDate(), command.startTime(), command.endTime());
             var notes = new Notes(command.observations());
@@ -147,6 +161,16 @@ public class OperationsManagementCommandServiceImpl implements OperationsManagem
         } catch (IllegalStateException e) {
             return Result.failure(ApplicationError.businessRuleViolation("service operation completion", e.getMessage()));
         }
+    }
+
+    private boolean isRentalParticipant(Long rentalId, Long machineryId, Long profileId) {
+        if (profileId == null || profileId <= 0) {
+            return false;
+        }
+        if (profileId.equals(externalRentalService.fetchRentalContractorProfileId(rentalId))) {
+            return true;
+        }
+        return externalFleetService.fetchOwnerProfileId(machineryId).map(profileId::equals).orElse(false);
     }
 
     private ApplicationError checkOwnerPermission(Long machineryId, Long validatorProfileId) {
