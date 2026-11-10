@@ -9,10 +9,15 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.ErrorResponse;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.text.MessageFormat;
 import java.util.Map;
@@ -105,6 +110,17 @@ public class GlobalExceptionHandler {
                 resolveMessageOrDefault("error.forbidden.role", "Your role is not allowed to perform this operation")
         );
         return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(applicationError);
+    }
+
+    /**
+     * Framework errors that already carry their HTTP status (unsupported method, unknown route,
+     * missing request parameter, unsupported media type), so they are not reported as 500.
+     */
+    @ExceptionHandler({HttpRequestMethodNotSupportedException.class, NoResourceFoundException.class,
+            MissingServletRequestParameterException.class, HttpMediaTypeNotSupportedException.class})
+    public ResponseEntity<ProblemDetail> handleFrameworkError(Exception ex) {
+        var errorResponse = (ErrorResponse) ex;
+        return ResponseEntity.status(errorResponse.getStatusCode()).body(errorResponse.getBody());
     }
 
     @ExceptionHandler(RuntimeException.class)
