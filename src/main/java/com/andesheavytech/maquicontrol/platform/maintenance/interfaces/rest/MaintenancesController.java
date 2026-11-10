@@ -1,21 +1,20 @@
 package com.andesheavytech.maquicontrol.platform.maintenance.interfaces.rest;
 
+import com.andesheavytech.maquicontrol.platform.fleet.interfaces.acl.FleetContextFacade;
 import com.andesheavytech.maquicontrol.platform.maintenance.application.commandservices.MaintenanceManagementCommandService;
 import com.andesheavytech.maquicontrol.platform.maintenance.application.queryservices.MaintenanceManagementQueryService;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.aggregates.Maintenance;
+import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.commands.CancelMaintenanceCommand;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.commands.CompleteMaintenanceCommand;
-import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.commands.ReportBreakdownCommand;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.commands.ScheduleMaintenanceCommand;
-import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.commands.UpdateMaintenanceStatusCommand;
+import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.commands.StartMaintenanceCommand;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.queries.CheckMaintenanceDetailsQuery;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.queries.GetMaintenancesByOwnerProfileIdQuery;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.queries.ViewMaintenanceHistoryQuery;
-import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.queries.ViewPendingMaintenanceQuery;
-import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.valueobjects.BreakdownSeverity;
+import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.queries.ViewMaintenanceScheduleQuery;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.valueobjects.MaintenanceStatus;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.valueobjects.MaintenanceType;
 import com.andesheavytech.maquicontrol.platform.maintenance.interfaces.rest.resources.MaintenanceResource;
-import com.andesheavytech.maquicontrol.platform.maintenance.interfaces.rest.resources.ReportBreakdownResource;
 import com.andesheavytech.maquicontrol.platform.maintenance.interfaces.rest.resources.ScheduleMaintenanceResource;
 import com.andesheavytech.maquicontrol.platform.maintenance.interfaces.rest.resources.UpdateMaintenanceStatusResource;
 import com.andesheavytech.maquicontrol.platform.maintenance.interfaces.rest.transform.MaintenanceEnumAssembler;
@@ -47,6 +46,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Maintenance endpoints. Owners schedule, start, complete and cancel maintenance; owners and
@@ -54,7 +54,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping(value = "/api/v1/maintenances", produces = MediaType.APPLICATION_JSON_VALUE)
-@Tag(name = "Maintenances", description = "Maintenance scheduling and breakdown reporting endpoints")
+@Tag(name = "Maintenances", description = "Maintenance scheduling endpoints")
 public class MaintenancesController {
 
     private static final String OWNER_ROLES = "hasAnyRole('FLEET_OWNER','FLEET_ADMINISTRATOR')";
@@ -62,13 +62,16 @@ public class MaintenancesController {
     private final MaintenanceManagementCommandService maintenanceManagementCommandService;
     private final MaintenanceManagementQueryService maintenanceManagementQueryService;
     private final ProfilesContextFacade profilesContextFacade;
+    private final FleetContextFacade fleetContextFacade;
 
     public MaintenancesController(MaintenanceManagementCommandService maintenanceManagementCommandService,
                                   MaintenanceManagementQueryService maintenanceManagementQueryService,
-                                  ProfilesContextFacade profilesContextFacade) {
+                                  ProfilesContextFacade profilesContextFacade,
+                                  FleetContextFacade fleetContextFacade) {
         this.maintenanceManagementCommandService = maintenanceManagementCommandService;
         this.maintenanceManagementQueryService = maintenanceManagementQueryService;
         this.profilesContextFacade = profilesContextFacade;
+        this.fleetContextFacade = fleetContextFacade;
     }
 
     @PostMapping
@@ -107,31 +110,16 @@ public class MaintenancesController {
                                                      Authentication authentication) {
         var ownerProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
         var status = MaintenanceEnumAssembler.toEnum(MaintenanceStatus.class, resource.status(), "status");
-        Result<Maintenance, ApplicationError> result = status == MaintenanceStatus.COMPLETED
-                ? maintenanceManagementCommandService.handle(new CompleteMaintenanceCommand(maintenanceId, ownerProfileId,
-                        resource.cost() == null ? null : resource.cost().amount(),
-                        resource.cost() == null ? null : resource.cost().currency()))
-                : maintenanceManagementCommandService.handle(new UpdateMaintenanceStatusCommand(maintenanceId, ownerProfileId, status));
+        Result<Maintenance, ApplicationError> result = switch (status) {
+            case IN_PROGRESS -> maintenanceManagementCommandService.handle(new StartMaintenanceCommand(maintenanceId, ownerProfileId));
+            case COMPLETED -> maintenanceManagementCommandService.handle(new CompleteMaintenanceCommand(maintenanceId, ownerProfileId,
+                    resource.cost() == null ? null : resource.cost().amount(),
+                    resource.cost() == null ? null : resource.cost().currency()));
+            case CANCELLED -> maintenanceManagementCommandService.handle(new CancelMaintenanceCommand(maintenanceId, ownerProfileId));
+            case SCHEDULED -> Result.failure(ApplicationError.validationError("status", "a maintenance cannot go back to SCHEDULED"));
+        };
         return ResponseEntityAssembler.toResponseEntityFromResult(result,
                 MaintenanceResourceFromEntityAssembler::toResourceFromEntity, HttpStatus.OK);
-    }
-
-    @PostMapping("/breakdown-reports")
-    @Operation(summary = "Report breakdown",
-            description = "Reports a breakdown on a machine. It is added to its pending corrective maintenance, or a new corrective maintenance is scheduled.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Breakdown reported",
-                    content = @Content(schema = @Schema(implementation = MaintenanceResource.class))),
-            @ApiResponse(responseCode = "403", description = "Not the owner nor a contractor with a rental in progress"),
-            @ApiResponse(responseCode = "404", description = "Machinery not found")
-    })
-    public ResponseEntity<?> reportBreakdown(@Valid @RequestBody ReportBreakdownResource resource,
-                                             Authentication authentication) {
-        var reporterProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
-        var command = new ReportBreakdownCommand(resource.machineryId(), reporterProfileId, resource.description(),
-                MaintenanceEnumAssembler.toEnum(BreakdownSeverity.class, resource.severity(), "severity"));
-        return ResponseEntityAssembler.toResponseEntityFromResult(maintenanceManagementCommandService.handle(command),
-                MaintenanceResourceFromEntityAssembler::toResourceFromEntity, HttpStatus.CREATED);
     }
 
     @GetMapping
@@ -149,7 +137,7 @@ public class MaintenancesController {
     @Operation(summary = "View pending maintenance", description = "Scheduled and in-progress maintenances of the signed-in owner's machines.")
     public ResponseEntity<List<MaintenanceResource>> getPendingMaintenance(Authentication authentication) {
         var ownerProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
-        return ResponseEntity.ok(toResources(maintenanceManagementQueryService.handle(new ViewPendingMaintenanceQuery(ownerProfileId))));
+        return ResponseEntity.ok(toResources(maintenanceManagementQueryService.handle(new ViewMaintenanceScheduleQuery(ownerProfileId))));
     }
 
     @GetMapping("/history")
@@ -160,11 +148,18 @@ public class MaintenancesController {
 
     @GetMapping("/{maintenanceId}")
     @Operation(summary = "Check maintenance details")
-    public ResponseEntity<?> getMaintenanceById(@PathVariable Long maintenanceId) {
-        return maintenanceManagementQueryService.handle(new CheckMaintenanceDetailsQuery(maintenanceId))
-                .<ResponseEntity<?>>map(maintenance -> ResponseEntity.ok(MaintenanceResourceFromEntityAssembler.toResourceFromEntity(maintenance)))
-                .orElseGet(() -> ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
-                        ApplicationError.notFound("Maintenance", String.valueOf(maintenanceId))));
+    public ResponseEntity<?> getMaintenanceById(@PathVariable Long maintenanceId, Authentication authentication) {
+        var profileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
+        var maintenance = maintenanceManagementQueryService.handle(new CheckMaintenanceDetailsQuery(maintenanceId));
+        if (maintenance.isEmpty()) {
+            return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+                    ApplicationError.notFound("Maintenance", String.valueOf(maintenanceId)));
+        }
+        if (!Objects.equals(fleetContextFacade.fetchOwnerProfileId(maintenance.get().getMachineryId()), profileId)) {
+            return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+                    ApplicationError.forbidden("maintenance", "only the machinery owner can see this maintenance"));
+        }
+        return ResponseEntity.ok(MaintenanceResourceFromEntityAssembler.toResourceFromEntity(maintenance.get()));
     }
 
     private static List<MaintenanceResource> toResources(List<Maintenance> maintenances) {

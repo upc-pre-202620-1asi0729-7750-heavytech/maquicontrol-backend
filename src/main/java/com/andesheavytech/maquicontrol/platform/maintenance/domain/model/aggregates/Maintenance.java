@@ -2,9 +2,10 @@ package com.andesheavytech.maquicontrol.platform.maintenance.domain.model.aggreg
 
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.entities.BreakdownReport;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.events.BreakdownReportedEvent;
+import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.events.MaintenanceCancelledEvent;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.events.MaintenanceCompletedEvent;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.events.MaintenanceScheduledEvent;
-import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.events.MaintenanceStatusUpdatedEvent;
+import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.events.MaintenanceStartedEvent;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.valueobjects.MaintenanceStatus;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.valueobjects.MaintenanceType;
 import com.andesheavytech.maquicontrol.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
@@ -104,7 +105,7 @@ public class Maintenance extends AbstractDomainAggregateRoot<Maintenance> {
         requireStatus(MaintenanceStatus.SCHEDULED, "start");
         this.status = MaintenanceStatus.IN_PROGRESS;
         this.startedAt = LocalDateTime.now();
-        registerDomainEvent(new MaintenanceStatusUpdatedEvent(id, machineryId, status.name()));
+        registerDomainEvent(new MaintenanceStartedEvent(id, machineryId));
     }
 
     /**
@@ -121,22 +122,11 @@ public class Maintenance extends AbstractDomainAggregateRoot<Maintenance> {
         registerDomainEvent(new MaintenanceCompletedEvent(id, machineryId));
     }
 
-    /**
-     * Status change requested by the owner: IN_PROGRESS starts it, CANCELLED cancels it while it
-     * is still scheduled, and COMPLETED completes it without a cost.
-     */
-    public void updateStatus(MaintenanceStatus newStatus) {
-        Objects.requireNonNull(newStatus, "status is required");
-        switch (newStatus) {
-            case IN_PROGRESS -> start();
-            case COMPLETED -> complete(null);
-            case CANCELLED -> {
-                requireStatus(MaintenanceStatus.SCHEDULED, "cancel");
-                this.status = MaintenanceStatus.CANCELLED;
-                registerDomainEvent(new MaintenanceStatusUpdatedEvent(id, machineryId, status.name()));
-            }
-            case SCHEDULED -> throw new IllegalArgumentException("a maintenance cannot go back to SCHEDULED");
-        }
+    /** The owner cancels a maintenance that has not started yet. */
+    public void cancel() {
+        requireStatus(MaintenanceStatus.SCHEDULED, "cancel");
+        this.status = MaintenanceStatus.CANCELLED;
+        registerDomainEvent(new MaintenanceCancelledEvent(id, machineryId));
     }
 
     /**

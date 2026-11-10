@@ -4,12 +4,12 @@ import com.andesheavytech.maquicontrol.platform.maintenance.application.commands
 import com.andesheavytech.maquicontrol.platform.maintenance.application.internal.outboundservices.acl.ExternalFleetService;
 import com.andesheavytech.maquicontrol.platform.maintenance.application.internal.outboundservices.acl.ExternalRentalService;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.aggregates.Maintenance;
+import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.commands.CancelMaintenanceCommand;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.commands.CompleteMaintenanceCommand;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.commands.ReportBreakdownCommand;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.commands.ScheduleMaintenanceCommand;
-import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.commands.UpdateMaintenanceStatusCommand;
+import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.commands.StartMaintenanceCommand;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.entities.BreakdownReport;
-import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.valueobjects.MaintenanceStatus;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.repositories.MaintenanceRepository;
 import com.andesheavytech.maquicontrol.platform.shared.application.result.ApplicationError;
 import com.andesheavytech.maquicontrol.platform.shared.application.result.Result;
@@ -56,18 +56,27 @@ public class MaintenanceManagementCommandServiceImpl implements MaintenanceManag
 
     @Override
     @Transactional
-    public Result<Maintenance, ApplicationError> handle(UpdateMaintenanceStatusCommand command) {
+    public Result<Maintenance, ApplicationError> handle(StartMaintenanceCommand command) {
         var found = findMaintenanceOfOwner(command.maintenanceId(), command.ownerProfileId());
         if (found.isFailure()) {
             return found;
         }
         var maintenance = found.getOrElse(null);
-        if (command.status() == MaintenanceStatus.IN_PROGRESS
-                && externalFleetService.isMachineryCommittedToRental(maintenance.getMachineryId())) {
+        if (externalFleetService.isMachineryCommittedToRental(maintenance.getMachineryId())) {
             return Result.failure(ApplicationError.businessRuleViolation("machinery in use",
                     "the machinery is reserved or rented; finish or cancel the rental first"));
         }
-        return applyTransition(maintenance, current -> current.updateStatus(command.status()));
+        return applyTransition(maintenance, Maintenance::start);
+    }
+
+    @Override
+    @Transactional
+    public Result<Maintenance, ApplicationError> handle(CancelMaintenanceCommand command) {
+        var found = findMaintenanceOfOwner(command.maintenanceId(), command.ownerProfileId());
+        if (found.isFailure()) {
+            return found;
+        }
+        return applyTransition(found.getOrElse(null), Maintenance::cancel);
     }
 
     @Override

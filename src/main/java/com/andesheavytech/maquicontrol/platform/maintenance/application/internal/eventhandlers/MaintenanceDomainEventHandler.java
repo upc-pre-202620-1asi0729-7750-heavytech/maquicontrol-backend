@@ -1,8 +1,7 @@
 package com.andesheavytech.maquicontrol.platform.maintenance.application.internal.eventhandlers;
 
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.events.MaintenanceCompletedEvent;
-import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.events.MaintenanceStatusUpdatedEvent;
-import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.valueobjects.MaintenanceStatus;
+import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.events.MaintenanceStartedEvent;
 import com.andesheavytech.maquicontrol.platform.maintenance.interfaces.events.MaintenanceCompletedIntegrationEvent;
 import com.andesheavytech.maquicontrol.platform.maintenance.interfaces.events.MaintenanceStartedIntegrationEvent;
 import org.springframework.context.ApplicationEventPublisher;
@@ -23,11 +22,9 @@ public class MaintenanceDomainEventHandler {
     }
 
     @EventListener
-    public void on(MaintenanceStatusUpdatedEvent event) {
-        if (MaintenanceStatus.IN_PROGRESS.name().equals(event.status())) {
-            applicationEventPublisher.publishEvent(
-                    new MaintenanceStartedIntegrationEvent(event.maintenanceId(), event.machineryId()));
-        }
+    public void on(MaintenanceStartedEvent event) {
+        applicationEventPublisher.publishEvent(
+                new MaintenanceStartedIntegrationEvent(event.maintenanceId(), event.machineryId()));
     }
 
     @EventListener

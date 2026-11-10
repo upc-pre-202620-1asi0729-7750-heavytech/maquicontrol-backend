@@ -54,14 +54,14 @@ class MaintenanceTest {
     void cancelOnlyWhileScheduled() {
         var maintenance = scheduledMaintenance();
         maintenance.start();
-        assertThrows(IllegalStateException.class, () -> maintenance.updateStatus(MaintenanceStatus.CANCELLED));
+        assertThrows(IllegalStateException.class, () -> maintenance.cancel());
     }
 
     @Test
     void cannotReportBreakdownOnCompletedMaintenance() {
         var maintenance = scheduledMaintenance();
-        maintenance.updateStatus(MaintenanceStatus.IN_PROGRESS);
-        maintenance.updateStatus(MaintenanceStatus.COMPLETED);
+        maintenance.start();
+        maintenance.complete(null);
         assertThrows(IllegalStateException.class,
                 () -> maintenance.reportBreakdown(BreakdownReport.report("Noise", BreakdownSeverity.LOW)));
     }

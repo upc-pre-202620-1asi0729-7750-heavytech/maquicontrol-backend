@@ -5,8 +5,9 @@ import com.andesheavytech.maquicontrol.platform.maintenance.application.queryser
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.aggregates.Maintenance;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.queries.CheckMaintenanceDetailsQuery;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.queries.GetMaintenancesByOwnerProfileIdQuery;
+import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.queries.ViewBreakdownReportsQuery;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.queries.ViewMaintenanceHistoryQuery;
-import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.queries.ViewPendingMaintenanceQuery;
+import com.andesheavytech.maquicontrol.platform.maintenance.domain.model.queries.ViewMaintenanceScheduleQuery;
 import com.andesheavytech.maquicontrol.platform.maintenance.domain.repositories.MaintenanceRepository;
 import org.springframework.stereotype.Service;
 
@@ -39,7 +40,7 @@ public class MaintenanceManagementQueryServiceImpl implements MaintenanceManagem
     }
 
     @Override
-    public List<Maintenance> handle(ViewPendingMaintenanceQuery query) {
+    public List<Maintenance> handle(ViewMaintenanceScheduleQuery query) {
         var machineryIds = externalFleetService.fetchMachineryIdsByOwnerProfileId(query.ownerProfileId());
         return machineryIds.isEmpty() ? List.of() : maintenanceRepository.findPendingByMachineryIds(machineryIds);
     }
@@ -53,5 +54,12 @@ public class MaintenanceManagementQueryServiceImpl implements MaintenanceManagem
                     : List.of();
         }
         return machineryIds.isEmpty() ? List.of() : maintenanceRepository.findByMachineryIds(machineryIds);
+    }
+
+    @Override
+    public List<Maintenance> handle(ViewBreakdownReportsQuery query) {
+        return maintenanceRepository.findByMachineryId(query.machineryId()).stream()
+                .filter(maintenance -> !maintenance.getBreakdownReports().isEmpty())
+                .toList();
     }
 }
