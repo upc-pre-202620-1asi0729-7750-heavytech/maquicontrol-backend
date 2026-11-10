@@ -4,7 +4,7 @@ import com.andesheavytech.maquicontrol.platform.iam.interfaces.acl.IamContextFac
 import com.andesheavytech.maquicontrol.platform.profiles.application.commandservices.ProfilesManagementCommandService;
 import com.andesheavytech.maquicontrol.platform.profiles.application.queryservices.ProfilesManagementQueryService;
 import com.andesheavytech.maquicontrol.platform.profiles.domain.model.aggregates.Profile;
-import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.GetOrganizationByIdQuery;
+import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.ViewOrganizationQuery;
 import com.andesheavytech.maquicontrol.platform.profiles.interfaces.rest.resources.CreateOrganizationResource;
 import com.andesheavytech.maquicontrol.platform.profiles.interfaces.rest.resources.OrganizationResource;
 import com.andesheavytech.maquicontrol.platform.profiles.interfaces.rest.resources.UpdateOrganizationResource;
@@ -89,7 +89,7 @@ public class OrganizationsController {
     @GetMapping("/{organizationId}")
     @Operation(summary = "Get organization by id")
     public ResponseEntity<?> getOrganizationById(@PathVariable Long organizationId) {
-        return profilesManagementQueryService.handle(new GetOrganizationByIdQuery(organizationId))
+        return profilesManagementQueryService.handle(new ViewOrganizationQuery(organizationId))
                 .<ResponseEntity<?>>map(organization -> ResponseEntity.ok(OrganizationResourceFromEntityAssembler.toResourceFromEntity(organization)))
                 .orElseGet(() -> ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
                         ApplicationError.notFound("Organization", String.valueOf(organizationId))));

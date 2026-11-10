@@ -3,8 +3,8 @@ package com.andesheavytech.maquicontrol.platform.profiles.interfaces.rest;
 import com.andesheavytech.maquicontrol.platform.iam.interfaces.acl.IamContextFacade;
 import com.andesheavytech.maquicontrol.platform.profiles.application.commandservices.ProfilesManagementCommandService;
 import com.andesheavytech.maquicontrol.platform.profiles.application.queryservices.ProfilesManagementQueryService;
-import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.GetProfileByIdQuery;
 import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.GetProfileByUserAccountIdQuery;
+import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.ViewProfileQuery;
 import com.andesheavytech.maquicontrol.platform.profiles.interfaces.rest.resources.CreateProfileResource;
 import com.andesheavytech.maquicontrol.platform.profiles.interfaces.rest.resources.ProfileResource;
 import com.andesheavytech.maquicontrol.platform.profiles.interfaces.rest.resources.UpdateProfileResource;
@@ -97,7 +97,7 @@ public class ProfilesController {
     @GetMapping("/{profileId}")
     @Operation(summary = "Get profile by id")
     public ResponseEntity<?> getProfileById(@PathVariable Long profileId) {
-        return profilesManagementQueryService.handle(new GetProfileByIdQuery(profileId))
+        return profilesManagementQueryService.handle(new ViewProfileQuery(profileId))
                 .<ResponseEntity<?>>map(profile -> ResponseEntity.ok(ProfileResourceFromEntityAssembler.toResourceFromEntity(profile)))
                 .orElseGet(() -> ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
                         ApplicationError.notFound("Profile", String.valueOf(profileId))));

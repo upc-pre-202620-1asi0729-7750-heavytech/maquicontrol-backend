@@ -3,9 +3,9 @@ package com.andesheavytech.maquicontrol.platform.profiles.application.internal.q
 import com.andesheavytech.maquicontrol.platform.profiles.application.queryservices.ProfilesManagementQueryService;
 import com.andesheavytech.maquicontrol.platform.profiles.domain.model.aggregates.Profile;
 import com.andesheavytech.maquicontrol.platform.profiles.domain.model.entities.Organization;
-import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.GetOrganizationByIdQuery;
-import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.GetProfileByIdQuery;
 import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.GetProfileByUserAccountIdQuery;
+import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.ViewOrganizationQuery;
+import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.ViewProfileQuery;
 import com.andesheavytech.maquicontrol.platform.profiles.domain.repositories.ProfileRepository;
 import org.springframework.stereotype.Service;
 
@@ -24,7 +24,7 @@ public class ProfilesManagementQueryServiceImpl implements ProfilesManagementQue
     }
 
     @Override
-    public Optional<Profile> handle(GetProfileByIdQuery query) {
+    public Optional<Profile> handle(ViewProfileQuery query) {
         return profileRepository.findById(query.profileId());
     }
 
@@ -34,7 +34,7 @@ public class ProfilesManagementQueryServiceImpl implements ProfilesManagementQue
     }
 
     @Override
-    public Optional<Organization> handle(GetOrganizationByIdQuery query) {
+    public Optional<Organization> handle(ViewOrganizationQuery query) {
         return profileRepository.findByOrganizationId(query.organizationId()).map(Profile::getOrganization);
     }
 }

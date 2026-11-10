@@ -2,9 +2,9 @@ package com.andesheavytech.maquicontrol.platform.profiles.application.queryservi
 
 import com.andesheavytech.maquicontrol.platform.profiles.domain.model.aggregates.Profile;
 import com.andesheavytech.maquicontrol.platform.profiles.domain.model.entities.Organization;
-import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.GetOrganizationByIdQuery;
-import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.GetProfileByIdQuery;
 import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.GetProfileByUserAccountIdQuery;
+import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.ViewOrganizationQuery;
+import com.andesheavytech.maquicontrol.platform.profiles.domain.model.queries.ViewProfileQuery;
 
 import java.util.Optional;
 
@@ -13,9 +13,9 @@ import java.util.Optional;
  */
 public interface ProfilesManagementQueryService {
 
-    Optional<Profile> handle(GetProfileByIdQuery query);
+    Optional<Profile> handle(ViewProfileQuery query);
 
     Optional<Profile> handle(GetProfileByUserAccountIdQuery query);
 
-    Optional<Organization> handle(GetOrganizationByIdQuery query);
+    Optional<Organization> handle(ViewOrganizationQuery query);
 }
