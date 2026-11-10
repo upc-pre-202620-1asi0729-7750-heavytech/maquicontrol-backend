@@ -5,7 +5,6 @@ import com.andesheavytech.maquicontrol.platform.billing.application.queryservice
 import com.andesheavytech.maquicontrol.platform.billing.domain.model.commands.CalculateRentalAmountCommand;
 import com.andesheavytech.maquicontrol.platform.billing.domain.model.commands.IssueInvoiceCommand;
 import com.andesheavytech.maquicontrol.platform.billing.domain.model.queries.ViewInvoiceByRentalIdQuery;
-import com.andesheavytech.maquicontrol.platform.billing.domain.model.queries.ViewInvoiceHistoryQuery;
 import com.andesheavytech.maquicontrol.platform.billing.domain.model.queries.ViewInvoiceQuery;
 import com.andesheavytech.maquicontrol.platform.billing.domain.model.queries.ViewInvoicesByOwnerProfileIdQuery;
 import com.andesheavytech.maquicontrol.platform.billing.interfaces.rest.resources.CalculateInvoiceResource;
@@ -24,6 +23,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -56,6 +56,7 @@ public class InvoicesController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('FLEET_OWNER','FLEET_ADMINISTRATOR')")
     @Operation(summary = "Calculate invoice", description = "Calculates and creates a pending invoice for a rental.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Invoice calculated",
@@ -94,7 +95,7 @@ public class InvoicesController {
     }
 
     @GetMapping
-    @Operation(summary = "Query invoices", description = "List all invoices, filter by rentalId, or view authenticated owner's invoices.")
+    @Operation(summary = "Query invoices", description = "Filter by rentalId, or view the authenticated owner's invoices.")
     public ResponseEntity<List<InvoiceResource>> getInvoices(
             @RequestParam(required = false) Long rentalId,
             Authentication authentication) {
@@ -110,15 +111,10 @@ public class InvoicesController {
                 var list = billingManagementQueryService.handle(new ViewInvoicesByOwnerProfileIdQuery(ownerProfileId)).stream()
                         .map(BillingResourceFromEntityAssembler::toResourceFromEntity)
                         .toList();
-                if (!list.isEmpty()) {
-                    return ResponseEntity.ok(list);
-                }
+                return ResponseEntity.ok(list);
             }
         }
-        var list = billingManagementQueryService.handle(new ViewInvoiceHistoryQuery(null)).stream()
-                .map(BillingResourceFromEntityAssembler::toResourceFromEntity)
-                .toList();
-        return ResponseEntity.ok(list);
+        return ResponseEntity.ok(List.of());
     }
 
     @GetMapping("/{invoiceId}")
