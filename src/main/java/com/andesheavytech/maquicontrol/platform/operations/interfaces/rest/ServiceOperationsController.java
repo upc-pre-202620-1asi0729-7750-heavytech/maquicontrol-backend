@@ -1,5 +1,6 @@
 package com.andesheavytech.maquicontrol.platform.operations.interfaces.rest;
 
+import com.andesheavytech.maquicontrol.platform.fleet.interfaces.acl.FleetContextFacade;
 import com.andesheavytech.maquicontrol.platform.operations.application.commandservices.OperationsManagementCommandService;
 import com.andesheavytech.maquicontrol.platform.operations.application.queryservices.OperationsManagementQueryService;
 import com.andesheavytech.maquicontrol.platform.operations.domain.model.aggregates.ServiceOperation;
@@ -21,6 +22,7 @@ import com.andesheavytech.maquicontrol.platform.operations.interfaces.rest.resou
 import com.andesheavytech.maquicontrol.platform.operations.interfaces.rest.resources.WorkedHoursResource;
 import com.andesheavytech.maquicontrol.platform.operations.interfaces.rest.transform.ServiceOperationResourceFromEntityAssembler;
 import com.andesheavytech.maquicontrol.platform.profiles.interfaces.acl.ProfilesContextFacade;
+import com.andesheavytech.maquicontrol.platform.rental.interfaces.acl.RentalContextFacade;
 import com.andesheavytech.maquicontrol.platform.shared.application.result.ApplicationError;
 import com.andesheavytech.maquicontrol.platform.shared.application.result.Result;
 import com.andesheavytech.maquicontrol.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
@@ -45,6 +47,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Controller for service operations and worked hours management.
@@ -57,13 +60,19 @@ public class ServiceOperationsController {
     private final OperationsManagementCommandService operationsManagementCommandService;
     private final OperationsManagementQueryService operationsManagementQueryService;
     private final ProfilesContextFacade profilesContextFacade;
+    private final RentalContextFacade rentalContextFacade;
+    private final FleetContextFacade fleetContextFacade;
 
     public ServiceOperationsController(OperationsManagementCommandService operationsManagementCommandService,
                                        OperationsManagementQueryService operationsManagementQueryService,
-                                       ProfilesContextFacade profilesContextFacade) {
+                                       ProfilesContextFacade profilesContextFacade,
+                                       RentalContextFacade rentalContextFacade,
+                                       FleetContextFacade fleetContextFacade) {
         this.operationsManagementCommandService = operationsManagementCommandService;
         this.operationsManagementQueryService = operationsManagementQueryService;
         this.profilesContextFacade = profilesContextFacade;
+        this.rentalContextFacade = rentalContextFacade;
+        this.fleetContextFacade = fleetContextFacade;
     }
 
     @PostMapping
@@ -79,11 +88,14 @@ public class ServiceOperationsController {
     public ResponseEntity<?> startOperation(@Valid @RequestBody StartOperationResource resource,
                                             Authentication authentication) {
         var requesterProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
+        boolean requesterIsOperator = authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_OPERATOR".equals(authority.getAuthority()));
         Long operatorProfileId = resource.operatorProfileId();
-        if (operatorProfileId == null || operatorProfileId <= 0) {
+        if (requesterIsOperator || operatorProfileId == null || operatorProfileId <= 0) {
             operatorProfileId = requesterProfileId;
         }
-        var command = new StartOperationCommand(resource.rentalId(), resource.machineryId(), operatorProfileId, requesterProfileId);
+        var command = new StartOperationCommand(resource.rentalId(), resource.machineryId(), operatorProfileId,
+                requesterProfileId, requesterIsOperator);
         return ResponseEntityAssembler.toResponseEntityFromResult(
                 operationsManagementCommandService.handle(command),
                 ServiceOperationResourceFromEntityAssembler::toResourceFromEntity,
@@ -172,19 +184,25 @@ public class ServiceOperationsController {
             @RequestParam(required = false) Long rentalId,
             @RequestParam(required = false) Long machineryId,
             Authentication authentication) {
+        var profileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
         if (rentalId != null) {
+            if (!rentalContextFacade.isRentalParticipant(rentalId, profileId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
             var opOpt = operationsManagementQueryService.handle(new ViewServiceOperationByRentalIdQuery(rentalId));
             var list = opOpt.map(op -> List.of(ServiceOperationResourceFromEntityAssembler.toResourceFromEntity(op)))
                     .orElse(List.of());
             return ResponseEntity.ok(list);
         }
         if (machineryId != null) {
+            if (!Objects.equals(fleetContextFacade.fetchOwnerProfileId(machineryId), profileId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
             var list = operationsManagementQueryService.handle(new GetOperationsByMachineryIdQuery(machineryId)).stream()
                     .map(ServiceOperationResourceFromEntityAssembler::toResourceFromEntity)
                     .toList();
             return ResponseEntity.ok(list);
         }
-        var profileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
         var list = operationsManagementQueryService.handle(new GetOperationsByOperatorProfileIdQuery(profileId)).stream()
                 .map(ServiceOperationResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();
@@ -192,20 +210,39 @@ public class ServiceOperationsController {
     }
 
     @GetMapping("/{operationId}")
-    @Operation(summary = "Get service operation by ID")
-    public ResponseEntity<ServiceOperationResource> getOperationById(@PathVariable Long operationId) {
-        return operationsManagementQueryService.handle(new ViewServiceOperationQuery(operationId))
-                .map(ServiceOperationResourceFromEntityAssembler::toResourceFromEntity)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @Operation(summary = "Get service operation by ID", description = "Only the operator, the contractor or the fleet owner can see it.")
+    public ResponseEntity<ServiceOperationResource> getOperationById(@PathVariable Long operationId,
+                                                                     Authentication authentication) {
+        var operation = operationsManagementQueryService.handle(new ViewServiceOperationQuery(operationId));
+        if (operation.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!canView(operation.get(), authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return ResponseEntity.ok(ServiceOperationResourceFromEntityAssembler.toResourceFromEntity(operation.get()));
     }
 
     @GetMapping("/{operationId}/worked-hours")
-    @Operation(summary = "Get worked hours of an operation")
-    public ResponseEntity<List<WorkedHoursResource>> getWorkedHours(@PathVariable Long operationId) {
+    @Operation(summary = "Get worked hours of an operation", description = "Only the operator, the contractor or the fleet owner can see them.")
+    public ResponseEntity<List<WorkedHoursResource>> getWorkedHours(@PathVariable Long operationId,
+                                                                   Authentication authentication) {
+        var operation = operationsManagementQueryService.handle(new ViewServiceOperationQuery(operationId));
+        if (operation.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!canView(operation.get(), authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         var list = operationsManagementQueryService.handle(new ViewWorkedHoursQuery(operationId)).stream()
                 .map(ServiceOperationResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();
         return ResponseEntity.ok(list);
+    }
+
+    private boolean canView(ServiceOperation operation, Authentication authentication) {
+        var profileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
+        return Objects.equals(operation.getOperatorProfileId(), profileId)
+                || rentalContextFacade.isRentalParticipant(operation.getRentalId(), profileId);
     }
 }

@@ -93,7 +93,7 @@ public class ServiceOperation extends AbstractDomainAggregateRoot<ServiceOperati
         requireStatus(OperationStatus.IN_PROGRESS, "validate worked hours");
         var record = findWorkedHours(workedHoursId);
         record.validate(validatorProfileId);
-        registerDomainEvent(new WorkedHoursValidatedEvent(id, workedHoursId, record.getTotalHours().value()));
+        registerDomainEvent(new WorkedHoursValidatedEvent(id, machineryId, workedHoursId, record.getTotalHours().value()));
     }
 
     /**

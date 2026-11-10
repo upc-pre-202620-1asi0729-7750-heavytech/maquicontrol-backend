@@ -1,5 +1,7 @@
 package com.andesheavytech.maquicontrol.platform.operations.application.acl;
 
+import com.andesheavytech.maquicontrol.platform.operations.domain.model.entities.WorkedHours;
+import com.andesheavytech.maquicontrol.platform.operations.domain.model.queries.GetOperationsByMachineryIdQuery;
 import com.andesheavytech.maquicontrol.platform.operations.application.queryservices.OperationsManagementQueryService;
 import com.andesheavytech.maquicontrol.platform.operations.domain.model.aggregates.ServiceOperation;
 import com.andesheavytech.maquicontrol.platform.operations.domain.model.queries.ViewServiceOperationByRentalIdQuery;
@@ -7,6 +9,7 @@ import com.andesheavytech.maquicontrol.platform.operations.domain.model.valueobj
 import com.andesheavytech.maquicontrol.platform.operations.interfaces.acl.OperationsContextFacade;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.math.BigDecimal;
 
 /**
@@ -40,5 +43,18 @@ public class OperationsContextFacadeImpl implements OperationsContextFacade {
                 .map(ServiceOperation::calculateTotalHours)
                 .map(h -> h.value())
                 .orElse(BigDecimal.ZERO);
+    }
+
+    @Override
+    public BigDecimal fetchValidatedHoursOfMachinerySince(Long machineryId, LocalDateTime since) {
+        if (machineryId == null || machineryId <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return operationsManagementQueryService.handle(new GetOperationsByMachineryIdQuery(machineryId)).stream()
+                .flatMap(operation -> operation.getWorkedHours().stream())
+                .filter(WorkedHours::isValidated)
+                .filter(record -> since == null || (record.getValidatedAt() != null && record.getValidatedAt().isAfter(since)))
+                .map(record -> record.getTotalHours().value())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

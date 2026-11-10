@@ -56,9 +56,11 @@ public class OperationsManagementCommandServiceImpl implements OperationsManagem
             return Result.failure(ApplicationError.businessRuleViolation("machinery",
                     "the machinery does not belong to rental " + command.rentalId()));
         }
-        if (!isRentalParticipant(command.rentalId(), command.machineryId(), command.requesterProfileId())) {
+        boolean operatorStartsForHimself = command.requesterIsOperator()
+                && Objects.equals(command.requesterProfileId(), command.operatorProfileId());
+        if (!operatorStartsForHimself && !isRentalParticipant(command.rentalId(), command.machineryId(), command.requesterProfileId())) {
             return Result.failure(ApplicationError.forbidden("operation",
-                    "only the contractor of the rental or the fleet owner can start the operation"));
+                    "only the operator, the contractor of the rental or the fleet owner can start the operation"));
         }
         if (serviceOperationRepository.existsByRentalId(command.rentalId())) {
             return Result.failure(ApplicationError.conflict("ServiceOperation",

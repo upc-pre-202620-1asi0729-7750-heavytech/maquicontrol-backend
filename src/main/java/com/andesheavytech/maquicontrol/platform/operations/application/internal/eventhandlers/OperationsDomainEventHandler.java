@@ -1,5 +1,7 @@
 package com.andesheavytech.maquicontrol.platform.operations.application.internal.eventhandlers;
 
+import com.andesheavytech.maquicontrol.platform.operations.interfaces.events.WorkedHoursValidatedIntegrationEvent;
+import com.andesheavytech.maquicontrol.platform.operations.domain.model.events.WorkedHoursValidatedEvent;
 import com.andesheavytech.maquicontrol.platform.operations.domain.model.events.OperationCompletedEvent;
 import com.andesheavytech.maquicontrol.platform.operations.domain.model.events.OperationStartedEvent;
 import com.andesheavytech.maquicontrol.platform.operations.interfaces.events.OperationCompletedIntegrationEvent;
@@ -34,5 +36,11 @@ public class OperationsDomainEventHandler {
                 event.operationId(), event.rentalId(), event.machineryId(), event.totalHours());
         applicationEventPublisher.publishEvent(new OperationCompletedIntegrationEvent(
                 event.operationId(), event.rentalId(), event.machineryId(), event.totalHours()));
+    }
+
+    @EventListener
+    public void on(WorkedHoursValidatedEvent event) {
+        applicationEventPublisher.publishEvent(new WorkedHoursValidatedIntegrationEvent(
+                event.operationId(), event.machineryId(), event.hours()));
     }
 }
