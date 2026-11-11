@@ -48,14 +48,8 @@ public class OpenApiConfiguration {
                         .description("MaquiControl Platform Documentation")
                         .url("https://github.com/upc-pre-202620-1asi0729-7750-heavytech/maquicontrol-backend"));
 
-        openApi.servers(List.of(
-                new Server()
-                        .url("http://localhost:8080")
-                        .description("Local Development Environment"),
-                new Server()
-                        .url("https://maquicontrol-backend.azurewebsites.net")
-                        .description("Production Environment")
-        ));
+        // Relative server: Swagger UI calls the same host that serves it, locally and in the cloud.
+        openApi.servers(List.of(new Server().url("/").description("Current environment")));
 
         final String securitySchemeName = "bearerAuth";
 
