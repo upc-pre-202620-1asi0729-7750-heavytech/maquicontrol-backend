@@ -17,6 +17,8 @@ public interface RentalRepository {
 
     List<Rental> findByContractorProfileId(Long contractorProfileId);
 
+    List<Rental> findByMachineryIds(Collection<Long> machineryIds);
+
     List<Rental> findByMachineryIdsAndStatus(Collection<Long> machineryIds, RentalStatus status);
 
     /**
