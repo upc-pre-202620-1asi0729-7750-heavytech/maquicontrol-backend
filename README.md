@@ -21,7 +21,7 @@ MaquiControl Platform is the RESTful API behind MaquiControl, the AndesHeavyTech
 
 ## Technologies
 
-- Java 27 and Spring Boot 4
+- Java 21 and Spring Boot 4
 - Apache Maven (or the bundled `./mvnw` wrapper)
 - Spring Web, Spring Data JPA (Hibernate) with MySQL
 - Spring Security with JWT (`io.jsonwebtoken`)
@@ -32,7 +32,7 @@ MaquiControl Platform is the RESTful API behind MaquiControl, the AndesHeavyTech
 
 ## Prerequisites
 
-- Java 27 or higher
+- Java 21 or higher
 - MySQL 8+ running locally
 - Docker (optional, for the containerized build)
 

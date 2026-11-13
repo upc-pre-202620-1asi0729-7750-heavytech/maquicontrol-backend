@@ -16,6 +16,8 @@ public interface RentalPersistenceRepository extends JpaRepository<RentalPersist
 
     List<RentalPersistenceEntity> findByContractorProfileIdOrderByIdDesc(Long contractorProfileId);
 
+    List<RentalPersistenceEntity> findByMachineryIdInOrderByIdDesc(Collection<Long> machineryIds);
+
     List<RentalPersistenceEntity> findByMachineryIdInAndStatusOrderByIdAsc(Collection<Long> machineryIds, RentalStatus status);
 
     List<RentalPersistenceEntity> findByStatusAndStartDateLessThanEqual(RentalStatus status, LocalDate date);
