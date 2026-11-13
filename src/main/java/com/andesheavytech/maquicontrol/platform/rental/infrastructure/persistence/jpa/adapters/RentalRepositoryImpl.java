@@ -55,6 +55,11 @@ public class RentalRepositoryImpl implements RentalRepository {
     }
 
     @Override
+    public List<Rental> findByMachineryIds(Collection<Long> machineryIds) {
+        return toDomain(rentalPersistenceRepository.findByMachineryIdInOrderByIdDesc(machineryIds));
+    }
+
+    @Override
     public List<Rental> findByMachineryIdsAndStatus(Collection<Long> machineryIds, RentalStatus status) {
         return toDomain(rentalPersistenceRepository.findByMachineryIdInAndStatusOrderByIdAsc(machineryIds, status));
     }

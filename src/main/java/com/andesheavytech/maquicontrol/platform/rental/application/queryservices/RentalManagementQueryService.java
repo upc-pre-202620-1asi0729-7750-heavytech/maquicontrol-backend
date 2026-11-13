@@ -5,6 +5,7 @@ import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.Chec
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalByIdQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalsDueToCompleteQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalsDueToStartQuery;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewFleetRentalsQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewMyReservationsQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewPendingRequestsQuery;
 import com.andesheavytech.maquicontrol.platform.shared.application.result.ApplicationError;
@@ -23,6 +24,8 @@ public interface RentalManagementQueryService {
     List<Rental> handle(ViewMyReservationsQuery query);
 
     List<Rental> handle(ViewPendingRequestsQuery query);
+
+    List<Rental> handle(ViewFleetRentalsQuery query);
 
     Result<Boolean, ApplicationError> handle(CheckMachineryAvailabilityQuery query);
 

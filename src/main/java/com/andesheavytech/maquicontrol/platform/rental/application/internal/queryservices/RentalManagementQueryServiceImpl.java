@@ -7,6 +7,7 @@ import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.Chec
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalByIdQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalsDueToCompleteQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalsDueToStartQuery;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewFleetRentalsQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewMyReservationsQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewPendingRequestsQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.valueobjects.RentalPeriod;
@@ -51,6 +52,15 @@ public class RentalManagementQueryServiceImpl implements RentalManagementQuerySe
             return List.of();
         }
         return rentalRepository.findByMachineryIdsAndStatus(machineryIds, RentalStatus.REQUESTED);
+    }
+
+    @Override
+    public List<Rental> handle(ViewFleetRentalsQuery query) {
+        var machineryIds = externalFleetService.fetchMachineryIdsByOwnerProfileId(query.ownerProfileId());
+        if (machineryIds.isEmpty()) {
+            return List.of();
+        }
+        return rentalRepository.findByMachineryIds(machineryIds);
     }
 
     @Override

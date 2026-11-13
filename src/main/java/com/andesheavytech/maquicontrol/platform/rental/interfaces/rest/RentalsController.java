@@ -10,6 +10,7 @@ import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.Rej
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.commands.RequestRentalCommand;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.CheckMachineryAvailabilityQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.GetRentalByIdQuery;
+import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewFleetRentalsQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewMyReservationsQuery;
 import com.andesheavytech.maquicontrol.platform.rental.domain.model.queries.ViewPendingRequestsQuery;
 import com.andesheavytech.maquicontrol.platform.rental.interfaces.acl.RentalContextFacade;
@@ -130,6 +131,17 @@ public class RentalsController {
     public ResponseEntity<List<RentalResource>> getPendingRequests(Authentication authentication) {
         var ownerProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
         var rentals = rentalManagementQueryService.handle(new ViewPendingRequestsQuery(ownerProfileId)).stream()
+                .map(RentalResourceFromEntityAssembler::toResourceFromEntity)
+                .toList();
+        return ResponseEntity.ok(rentals);
+    }
+
+    @GetMapping("/fleet-rentals")
+    @PreAuthorize("hasAnyRole('FLEET_OWNER','FLEET_ADMINISTRATOR')")
+    @Operation(summary = "View fleet rentals", description = "Every rental of the signed-in owner's machinery, in any status.")
+    public ResponseEntity<List<RentalResource>> getFleetRentals(Authentication authentication) {
+        var ownerProfileId = profilesContextFacade.fetchProfileIdByUserEmail(authentication.getName());
+        var rentals = rentalManagementQueryService.handle(new ViewFleetRentalsQuery(ownerProfileId)).stream()
                 .map(RentalResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();
         return ResponseEntity.ok(rentals);
